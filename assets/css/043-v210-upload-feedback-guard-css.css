@@ -1,0 +1,4 @@
+#v210InvoiceUploadFeedback{margin:10px 0;padding:10px 12px;border:1px solid #d7dee8;border-radius:8px;background:#fbfcfe;color:#344054;font-weight:800;font-size:13px}
+#v210InvoiceUploadFeedback strong{color:#172033}.v210-file-pill{display:inline-flex;align-items:center;gap:6px;margin:4px 5px 0 0;padding:4px 8px;border:1px solid #cfd8e3;border-radius:999px;background:#fff;color:#344054;font-size:12px;font-weight:800}
+#v189PageAnalysis .actions [onclick="analyzeInvoiceProfit()"]{display:inline-flex!important;visibility:visible!important;pointer-events:auto!important;opacity:1!important}
+#purchaseInvoiceFiles,#salesInvoiceFiles,#expenseReceiptFiles{pointer-events:auto!important;opacity:1!important;visibility:visible!important}

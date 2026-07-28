@@ -1,0 +1,1423 @@
+﻿<!DOCTYPE html>
+<!-- saved from url=(0083)file:///C:/Users/mikro/Downloads/OMAS_GRUP_FINANS_GUNCEL_temiz_eski%20versiyon.html -->
+<html lang="tr" data-v225-menu-router="on"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ÖMAS GRUP FİNANS</title>
+  <link rel="icon" type="image/png" href="file:///C:/Users/mikro/Downloads/omas-logo.png">
+  <script src="./ÖMAS GRUP FİNANS_files/xlsx.full.min.js.indir">
+
+/* =========================
+   V87 GLOBAL TAKVIM MODAL + GERÇEK NAKİT AKIŞ TAKVİMİ
+   ========================= */
+let cashOnlyCurrentDate=new Date();
+let cashOnlySelectedKey='';
+
+function openGlobalCalendar(kind){
+  const id=kind==='cash'?'cashOnlyCalendarModal':'generalCalendarModal';
+  const el=document.getElementById(id);
+  if(el) el.classList.add('open');
+  if(kind==='cash') renderCashOnlyCalendar();
+  else renderCashflowCalendar();
+}
+function closeGlobalCalendar(kind){
+  const id=kind==='cash'?'cashOnlyCalendarModal':'generalCalendarModal';
+  const el=document.getElementById(id);
+  if(el) el.classList.remove('open');
+}
+function renderAllCalendars(){
+  if(document.getElementById('generalCalendarModal')?.classList.contains('open')) renderCashflowCalendar();
+  if(document.getElementById('cashOnlyCalendarModal')?.classList.contains('open')) renderCashOnlyCalendar();
+}
+function cashOnlyBuildEvents(){
+  const events=[];
+  if(typeof bhdRawRows==='undefined' || !Array.isArray(bhdRawRows)) return events;
+  bhdRawRows.forEach(r=>{
+    const key=cashflowTrDateToKey(r.tarih);
+    if(!key) return;
+    const isCard=String(r.dosyaTipi||'').includes('Kredi Kartı');
+    events.push({
+      dateKey:key,
+      type:isCard?'Kredi Kartı Ekstresi':'Banka Hareketi',
+      title:r.kisiFirma||r.aciklama||'Nakit hareketi',
+      gelen:Number(r.gelen||0),
+      giden:Number(r.giden||0),
+      detail:(r.kategori||'')+(r.aciklama?' | '+r.aciklama:''),
+      source:r.kaynak||''
+    });
+  });
+  return events;
+}
+function cashOnlyEventsByDate(){
+  const map={};
+  cashOnlyBuildEvents().forEach(e=>{if(!map[e.dateKey])map[e.dateKey]=[];map[e.dateKey].push(e);});
+  return map;
+}
+function cashOnlyChangeMonth(delta){cashOnlyCurrentDate=new Date(cashOnlyCurrentDate.getFullYear(),cashOnlyCurrentDate.getMonth()+delta,1);renderCashOnlyCalendar();}
+function cashOnlySelectDay(key){cashOnlySelectedKey=key;renderCashOnlyCalendar();}
+function renderCashOnlyCalendar(){
+  const daysEl=document.getElementById('cashOnlyCalendarDays');
+  const titleEl=document.getElementById('cashOnlyMonthTitle');
+  const detailEl=document.getElementById('cashOnlyDayDetail');
+  if(!daysEl||!titleEl||!detailEl)return;
+  const map=cashOnlyEventsByDate();
+  const keys=Object.keys(map).sort();
+  if(!cashOnlySelectedKey && keys.length){
+    cashOnlySelectedKey=keys[keys.length-1];
+    const [y,m]=cashOnlySelectedKey.split('-').map(Number); cashOnlyCurrentDate=new Date(y,m-1,1);
+  }
+  if(!cashOnlySelectedKey){cashOnlySelectedKey=cashflowDateKey(new Date());cashOnlyCurrentDate=new Date();}
+  titleEl.textContent=cashflowMonthTitle(cashOnlyCurrentDate)+' • '+Object.values(map).reduce((s,a)=>s+a.length,0)+' nakit hareketi';
+  const y=cashOnlyCurrentDate.getFullYear(), m=cashOnlyCurrentDate.getMonth();
+  const first=new Date(y,m,1); const start=(first.getDay()+6)%7; const lastDay=new Date(y,m+1,0).getDate();
+  let html='';
+  for(let i=0;i<start;i++) html+='<div class="cashflow-day empty"></div>';
+  for(let d=1;d<=lastDay;d++){
+    const key=y+'-'+cashflowPad(m+1)+'-'+cashflowPad(d);
+    const rows=map[key]||[];
+    const gelen=rows.reduce((s,x)=>s+(x.gelen||0),0), giden=rows.reduce((s,x)=>s+(x.giden||0),0), net=gelen-giden;
+    const dots=rows.slice(0,8).map(x=>`<span class="cashflow-dot ${x.gelen>x.giden?'in':x.giden>x.gelen?'out':'neutral'}"></span>`).join('');
+    html+=`<div class="cashflow-day ${cashOnlySelectedKey===key?'selected':''}" onclick="cashOnlySelectDay('${key}')">
+      <div class="cashflow-day-number">${d}</div>
+      <div class="cashflow-day-mini">${rows.length?`<span>${rows.length} nakit hareketi</span><span class="in">+ ${invoiceFormatTL(gelen)}</span><span class="out">- ${invoiceFormatTL(giden)}</span><span class="net">Net ${invoiceFormatTL(net)}</span>`:'<span class="small">Nakit hareket yok</span>'}</div>
+      <div class="cashflow-dot-row">${dots}</div>
+    </div>`;
+  }
+  daysEl.innerHTML=html;
+  renderCashOnlyDayDetail(map[cashOnlySelectedKey]||[]);
+}
+function renderCashOnlyDayDetail(rows){
+  const el=document.getElementById('cashOnlyDayDetail'); if(!el)return;
+  const gelen=rows.reduce((s,x)=>s+(x.gelen||0),0), giden=rows.reduce((s,x)=>s+(x.giden||0),0), net=gelen-giden;
+  let html=`<div class="cashflow-detail-title">${cashflowKeyToDisplay(cashOnlySelectedKey)} Nakit Akışı</div><div class="cashflow-detail-sub">Bu panel sadece BHD modülünden okunan banka/kredi kartı hareketlerini gösterir. Fatura kesildi diye nakit girişi veya çıkışı varsaymaz.</div>`;
+  if(!rows.length){html+='<div class="cashflow-empty">Bu gün için banka/kredi kartı nakit hareketi yok. BHD modülüne banka hareketi veya kredi kartı ekstresi yükleyince burası dolar.</div>';}
+  const groups={}; rows.forEach(r=>{const k=r.type||'Diğer'; if(!groups[k])groups[k]=[]; groups[k].push(r);});
+  Object.keys(groups).forEach(type=>{
+    html+=`<div class="cashflow-event-group"><h4>${escapeHtml(type)}</h4>`;
+    groups[type].forEach(r=>{
+      html+=`<div class="cashflow-event"><div><strong>${escapeHtml(r.title||'')}</strong><small>${escapeHtml(r.detail||'')}</small><small>${escapeHtml(r.source||'')}</small></div><div class="amounts">${r.gelen?`<div class="in">+ ${invoiceFormatTL(r.gelen)}</div>`:''}${r.giden?`<div class="out">- ${invoiceFormatTL(r.giden)}</div>`:''}<div class="net">${invoiceFormatTL((r.gelen||0)-(r.giden||0))}</div></div></div>`;
+    });
+    html+='</div>';
+  });
+  html+=`<div class="cashflow-balance"><h4>Günün Gerçek Nakit Akışı</h4><div class="cashflow-balance-grid"><div><span>Hesaba Giren</span><strong class="positive">${invoiceFormatTL(gelen)}</strong></div><div><span>Hesaptan Çıkan</span><strong class="negative">${invoiceFormatTL(giden)}</strong></div><div><span>Net Nakit</span><strong class="${net>=0?'positive':'negative'}">${invoiceFormatTL(net)}</strong></div><div><span>Nakit Hareket Sayısı</span><strong>${rows.length}</strong></div></div></div>`;
+  el.innerHTML=html;
+}
+
+
+renderPersonnelList();
+renderManualCategoryList();
+renderSubcategoryParentOptions();
+renderGiderPusulasiAmount();
+renderInvoiceCommissionInputs();
+renderInvoiceProfitExpenseInputs();
+if(typeof renderCashflowCalendar==='function') renderCashflowCalendar();
+
+/* =========================
+   V88 - ÇEK VADE TARİHİ NAKİT AKIŞ FIX
+   =========================
+   Kural:
+   - Çek Alınan: Genel Takvimde görünsün, vade/tahsil tarihinde Nakit Akış Takviminde GELEN sayılsın.
+   - Çek Verilen: Genel Takvimde görünsün, vade/ödeme tarihinde Nakit Akış Takviminde GİDEN sayılsın.
+   - Manuel çek kaydında tarih alanı nakit akışı için vade/tahsil/ödeme tarihi kabul edilir.
+*/
+function v88IsChequeType(type){
+  const t=v87NormText(type);
+  return /CEK/.test(t);
+}
+function v88IsChequeIn(type){
+  const t=v87NormText(type);
+  return /CEK/.test(t) && /(ALINAN|ALINDI|TAHSIL|TAHSILAT|GIRIS|GELEN)/.test(t);
+}
+function v88IsChequeOut(type){
+  const t=v87NormText(type);
+  return /CEK/.test(t) && /(VERILEN|VERILDI|ODEME|ODENECEK|CIKIS|GIDEN)/.test(t);
+}
+function v88ManualTypeIsCash(type){
+  const t=v87NormText(type);
+  if(v88IsChequeType(type)) return true;
+  return /BANKA|TAHSILAT|ODEME|KREDI KARTI ODEMESI|KART ODEMESI|NAKIT/.test(t);
+}
+function v88ManualEventToCalendarEvent(e){
+  let gelen=Number(e.gelen||0);
+  let giden=Number(e.giden||0);
+  let detail=e.mergedWithBank?'Banka ekstresiyle eşleşti, mükerrer sayılmadı.':'Manuel kayıt';
+  if(v88IsChequeIn(e.type)){
+    // Kullanıcı yanlışlıkla çıkış alanına yazdıysa bile alınan çek nakit akışında giriş sayılır.
+    const amount=gelen || giden;
+    gelen=Number(amount||0); giden=0;
+    detail='Alınan çek: tarih alanı tahsil/vade tarihi kabul edildi. '+detail;
+  }else if(v88IsChequeOut(e.type)){
+    // Kullanıcı yanlışlıkla giriş alanına yazdıysa bile verilen çek nakit akışında çıkış sayılır.
+    const amount=giden || gelen;
+    giden=Number(amount||0); gelen=0;
+    detail='Verilen çek: tarih alanı ödeme/vade tarihi kabul edildi. '+detail;
+  }
+  return {
+    dateKey:e.date,
+    type:e.type||'Manuel',
+    title:e.title||'',
+    gelen,
+    giden,
+    detail,
+    source:e.mergedWithBank?'Manuel / Banka ile eşleşti':'Manuel',
+    manualId:e.id,
+    rawSource:'manual'
+  };
+}
+
+// V87 fonksiyonlarını çek vadesi mantığıyla override et.
+v87ManualTypeIsCash = v88ManualTypeIsCash;
+v87ManualEventToCalendarEvent = v88ManualEventToCalendarEvent;
+
+// Manuel ekleme override: çeklerde tarih=vade kabul edilir ve yön otomatik düzeltilir.
+addCashflowManualEvent=function(){
+  const date=document.getElementById('cashflowManualDate')?.value||'';
+  const type=document.getElementById('cashflowManualType')?.value||'Diğer';
+  const title=(document.getElementById('cashflowManualTitle')?.value||'').trim();
+  let gelen=invoiceNumber(document.getElementById('cashflowManualIn')?.value||0);
+  let giden=invoiceNumber(document.getElementById('cashflowManualOut')?.value||0);
+  if(!date || !title){alert('Tarih ve açıklama yazmalısın. Çeklerde bu tarih vade/tahsil/ödeme tarihi kabul edilir.');return;}
+  if(v88IsChequeIn(type)){
+    const amount=gelen || giden;
+    gelen=Number(amount||0); giden=0;
+  }else if(v88IsChequeOut(type)){
+    const amount=giden || gelen;
+    giden=Number(amount||0); gelen=0;
+  }
+  const candidate={id:'candidate',date,type,title,gelen,giden};
+  const imported=v87ImportedBhdEvents(false);
+  const dupBank=v87FindDuplicateImportedEvent(candidate,imported);
+  const dupManual=(cashflowManualEvents||[]).find(x=>v87EventDuplicateSignature(v87ManualEventToCalendarEvent(x))===v87EventDuplicateSignature(v87ManualEventToCalendarEvent(candidate)) && v87TextSimilarity(x.title,title)>=0.18);
+  if(dupBank){
+    alert('Bu manuel hareket banka ekstresindeki bir hareketle eşleşiyor. Mükerrer olmaması için manuel kayıt eklenmedi.');
+    return;
+  }
+  if(dupManual){
+    alert('Bu manuel harekete çok benzeyen bir manuel kayıt zaten var. Mükerrer olmaması için eklenmedi.');
+    return;
+  }
+  cashflowManualEvents.push({id:Date.now(),date,type,title,gelen,giden,mergedWithBank:false});
+  cashflowSaveManual();
+  document.getElementById('cashflowManualTitle').value='';
+  document.getElementById('cashflowManualIn').value='';
+  document.getElementById('cashflowManualOut').value='';
+  cashflowSelectedKey=date;
+  cashOnlySelectedKey=date;
+  const [y,m]=date.split('-').map(Number);
+  cashflowCurrentDate=new Date(y,m-1,1);
+  cashOnlyCurrentDate=new Date(y,m-1,1);
+  renderAllCalendars();
+};
+
+renderCashOnlyDayDetail=function(rows){
+  const el=document.getElementById('cashOnlyDayDetail'); if(!el)return;
+  const gelen=rows.reduce((s,x)=>s+(x.gelen||0),0), giden=rows.reduce((s,x)=>s+(x.giden||0),0), net=gelen-giden;
+  let html=`<div class="cashflow-detail-title">${cashflowKeyToDisplay(cashOnlySelectedKey)} Nakit Akışı</div><div class="cashflow-detail-sub">Kredi kartı harcamaları burada gider sayılmaz. Kredi kartı ödemesi, banka hesabı hareketi, çek tahsilatı ve çek ödemesi gerçek nakit hareketi kabul edilir.</div>`;
+  if(!rows.length){html+='<div class="cashflow-empty">Bu gün için gerçek nakit hareketi yok. Alış/satış faturaları Genel Takvimde görünür; burada sadece fiili nakit giriş/çıkış görünür.</div>';}
+  const groups={}; rows.forEach(r=>{const k=r.type||'Diğer'; if(!groups[k])groups[k]=[]; groups[k].push(r);});
+  Object.keys(groups).forEach(type=>{
+    html+=`<div class="cashflow-event-group"><h4>${escapeHtml(type)}</h4>`;
+    groups[type].forEach(r=>{
+      html+=`<div class="cashflow-event"><div><strong>${escapeHtml(r.title||'')}</strong><small>${escapeHtml(r.detail||'')}</small><small>${escapeHtml(r.source||'')}</small>${r.manualId?`<small><button class="detail-toggle" type="button" onclick="removeCashflowManualEvent('${r.manualId}')">Sil</button></small>`:''}</div><div class="amounts">${r.gelen?`<div class="in">+ ${invoiceFormatTL(r.gelen)}</div>`:''}${r.giden?`<div class="out">- ${invoiceFormatTL(r.giden)}</div>`:''}<div class="net">${invoiceFormatTL((r.gelen||0)-(r.giden||0))}</div></div></div>`;
+    });
+    html+='</div>';
+  });
+  html+=`<div class="cashflow-balance"><h4>Günün Gerçek Nakit Akışı</h4><div class="cashflow-balance-grid"><div><span>Hesaba Giren / Tahsil Edilen</span><strong class="positive">${invoiceFormatTL(gelen)}</strong></div><div><span>Hesaptan Çıkan / Ödenen</span><strong class="negative">${invoiceFormatTL(giden)}</strong></div><div><span>Net Nakit</span><strong class="${net>=0?'positive':'negative'}">${invoiceFormatTL(net)}</strong></div><div><span>Nakit Hareket Sayısı</span><strong>${rows.length}</strong></div></div></div>`;
+  el.innerHTML=html;
+};
+
+if(typeof renderAllCalendars==='function') renderAllCalendars();
+
+</script>
+
+
+
+
+
+<link id="v180-invoice-category-manager-css" rel="stylesheet" href="assets/css/001-v180-invoice-category-manager-css.css">
+
+<script id="v180-invoice-category-manager-js" src="assets/js/001-v180-invoice-category-manager-js.js"></script>
+
+
+
+
+<link id="v179-invoice-category-analysis-css" rel="stylesheet" href="assets/css/002-v179-invoice-category-analysis-css.css">
+
+<script id="v179-invoice-category-analysis-js" src="assets/js/002-v179-invoice-category-analysis-js.js"></script>
+  <script src="./ÖMAS GRUP FİNANS_files/pdf.min.js.indir">
+
+/* =========================
+   V87 GLOBAL TAKVIM MODAL + GERÇEK NAKİT AKIŞ TAKVİMİ
+   ========================= */
+let cashOnlyCurrentDate=new Date();
+let cashOnlySelectedKey='';
+
+function openGlobalCalendar(kind){
+  const id=kind==='cash'?'cashOnlyCalendarModal':'generalCalendarModal';
+  const el=document.getElementById(id);
+  if(el) el.classList.add('open');
+  if(kind==='cash') renderCashOnlyCalendar();
+  else renderCashflowCalendar();
+}
+function closeGlobalCalendar(kind){
+  const id=kind==='cash'?'cashOnlyCalendarModal':'generalCalendarModal';
+  const el=document.getElementById(id);
+  if(el) el.classList.remove('open');
+}
+function renderAllCalendars(){
+  if(document.getElementById('generalCalendarModal')?.classList.contains('open')) renderCashflowCalendar();
+  if(document.getElementById('cashOnlyCalendarModal')?.classList.contains('open')) renderCashOnlyCalendar();
+}
+function cashOnlyBuildEvents(){
+  const events=[];
+  if(typeof bhdRawRows==='undefined' || !Array.isArray(bhdRawRows)) return events;
+  bhdRawRows.forEach(r=>{
+    const key=cashflowTrDateToKey(r.tarih);
+    if(!key) return;
+    const isCard=String(r.dosyaTipi||'').includes('Kredi Kartı');
+    events.push({
+      dateKey:key,
+      type:isCard?'Kredi Kartı Ekstresi':'Banka Hareketi',
+      title:r.kisiFirma||r.aciklama||'Nakit hareketi',
+      gelen:Number(r.gelen||0),
+      giden:Number(r.giden||0),
+      detail:(r.kategori||'')+(r.aciklama?' | '+r.aciklama:''),
+      source:r.kaynak||''
+    });
+  });
+  return events;
+}
+function cashOnlyEventsByDate(){
+  const map={};
+  cashOnlyBuildEvents().forEach(e=>{if(!map[e.dateKey])map[e.dateKey]=[];map[e.dateKey].push(e);});
+  return map;
+}
+function cashOnlyChangeMonth(delta){cashOnlyCurrentDate=new Date(cashOnlyCurrentDate.getFullYear(),cashOnlyCurrentDate.getMonth()+delta,1);renderCashOnlyCalendar();}
+function cashOnlySelectDay(key){cashOnlySelectedKey=key;renderCashOnlyCalendar();}
+function renderCashOnlyCalendar(){
+  const daysEl=document.getElementById('cashOnlyCalendarDays');
+  const titleEl=document.getElementById('cashOnlyMonthTitle');
+  const detailEl=document.getElementById('cashOnlyDayDetail');
+  if(!daysEl||!titleEl||!detailEl)return;
+  const map=cashOnlyEventsByDate();
+  const keys=Object.keys(map).sort();
+  if(!cashOnlySelectedKey && keys.length){
+    cashOnlySelectedKey=keys[keys.length-1];
+    const [y,m]=cashOnlySelectedKey.split('-').map(Number); cashOnlyCurrentDate=new Date(y,m-1,1);
+  }
+  if(!cashOnlySelectedKey){cashOnlySelectedKey=cashflowDateKey(new Date());cashOnlyCurrentDate=new Date();}
+  titleEl.textContent=cashflowMonthTitle(cashOnlyCurrentDate)+' • '+Object.values(map).reduce((s,a)=>s+a.length,0)+' nakit hareketi';
+  const y=cashOnlyCurrentDate.getFullYear(), m=cashOnlyCurrentDate.getMonth();
+  const first=new Date(y,m,1); const start=(first.getDay()+6)%7; const lastDay=new Date(y,m+1,0).getDate();
+  let html='';
+  for(let i=0;i<start;i++) html+='<div class="cashflow-day empty"></div>';
+  for(let d=1;d<=lastDay;d++){
+    const key=y+'-'+cashflowPad(m+1)+'-'+cashflowPad(d);
+    const rows=map[key]||[];
+    const gelen=rows.reduce((s,x)=>s+(x.gelen||0),0), giden=rows.reduce((s,x)=>s+(x.giden||0),0), net=gelen-giden;
+    const dots=rows.slice(0,8).map(x=>`<span class="cashflow-dot ${x.gelen>x.giden?'in':x.giden>x.gelen?'out':'neutral'}"></span>`).join('');
+    html+=`<div class="cashflow-day ${cashOnlySelectedKey===key?'selected':''}" onclick="cashOnlySelectDay('${key}')">
+      <div class="cashflow-day-number">${d}</div>
+      <div class="cashflow-day-mini">${rows.length?`<span>${rows.length} nakit hareketi</span><span class="in">+ ${invoiceFormatTL(gelen)}</span><span class="out">- ${invoiceFormatTL(giden)}</span><span class="net">Net ${invoiceFormatTL(net)}</span>`:'<span class="small">Nakit hareket yok</span>'}</div>
+      <div class="cashflow-dot-row">${dots}</div>
+    </div>`;
+  }
+  daysEl.innerHTML=html;
+  renderCashOnlyDayDetail(map[cashOnlySelectedKey]||[]);
+}
+function renderCashOnlyDayDetail(rows){
+  const el=document.getElementById('cashOnlyDayDetail'); if(!el)return;
+  const gelen=rows.reduce((s,x)=>s+(x.gelen||0),0), giden=rows.reduce((s,x)=>s+(x.giden||0),0), net=gelen-giden;
+  let html=`<div class="cashflow-detail-title">${cashflowKeyToDisplay(cashOnlySelectedKey)} Nakit Akışı</div><div class="cashflow-detail-sub">Bu panel sadece BHD modülünden okunan banka/kredi kartı hareketlerini gösterir. Fatura kesildi diye nakit girişi veya çıkışı varsaymaz.</div>`;
+  if(!rows.length){html+='<div class="cashflow-empty">Bu gün için banka/kredi kartı nakit hareketi yok. BHD modülüne banka hareketi veya kredi kartı ekstresi yükleyince burası dolar.</div>';}
+  const groups={}; rows.forEach(r=>{const k=r.type||'Diğer'; if(!groups[k])groups[k]=[]; groups[k].push(r);});
+  Object.keys(groups).forEach(type=>{
+    html+=`<div class="cashflow-event-group"><h4>${escapeHtml(type)}</h4>`;
+    groups[type].forEach(r=>{
+      html+=`<div class="cashflow-event"><div><strong>${escapeHtml(r.title||'')}</strong><small>${escapeHtml(r.detail||'')}</small><small>${escapeHtml(r.source||'')}</small></div><div class="amounts">${r.gelen?`<div class="in">+ ${invoiceFormatTL(r.gelen)}</div>`:''}${r.giden?`<div class="out">- ${invoiceFormatTL(r.giden)}</div>`:''}<div class="net">${invoiceFormatTL((r.gelen||0)-(r.giden||0))}</div></div></div>`;
+    });
+    html+='</div>';
+  });
+  html+=`<div class="cashflow-balance"><h4>Günün Gerçek Nakit Akışı</h4><div class="cashflow-balance-grid"><div><span>Hesaba Giren</span><strong class="positive">${invoiceFormatTL(gelen)}</strong></div><div><span>Hesaptan Çıkan</span><strong class="negative">${invoiceFormatTL(giden)}</strong></div><div><span>Net Nakit</span><strong class="${net>=0?'positive':'negative'}">${invoiceFormatTL(net)}</strong></div><div><span>Nakit Hareket Sayısı</span><strong>${rows.length}</strong></div></div></div>`;
+  el.innerHTML=html;
+}
+
+
+renderPersonnelList();
+renderManualCategoryList();
+renderSubcategoryParentOptions();
+renderGiderPusulasiAmount();
+renderInvoiceCommissionInputs();
+if(typeof renderCashflowCalendar==='function') renderCashflowCalendar();
+
+/* =========================
+   V88 - ÇEK VADE TARİHİ NAKİT AKIŞ FIX
+   =========================
+   Kural:
+   - Çek Alınan: Genel Takvimde görünsün, vade/tahsil tarihinde Nakit Akış Takviminde GELEN sayılsın.
+   - Çek Verilen: Genel Takvimde görünsün, vade/ödeme tarihinde Nakit Akış Takviminde GİDEN sayılsın.
+   - Manuel çek kaydında tarih alanı nakit akışı için vade/tahsil/ödeme tarihi kabul edilir.
+*/
+function v88IsChequeType(type){
+  const t=v87NormText(type);
+  return /CEK/.test(t);
+}
+function v88IsChequeIn(type){
+  const t=v87NormText(type);
+  return /CEK/.test(t) && /(ALINAN|ALINDI|TAHSIL|TAHSILAT|GIRIS|GELEN)/.test(t);
+}
+function v88IsChequeOut(type){
+  const t=v87NormText(type);
+  return /CEK/.test(t) && /(VERILEN|VERILDI|ODEME|ODENECEK|CIKIS|GIDEN)/.test(t);
+}
+function v88ManualTypeIsCash(type){
+  const t=v87NormText(type);
+  if(v88IsChequeType(type)) return true;
+  return /BANKA|TAHSILAT|ODEME|KREDI KARTI ODEMESI|KART ODEMESI|NAKIT/.test(t);
+}
+function v88ManualEventToCalendarEvent(e){
+  let gelen=Number(e.gelen||0);
+  let giden=Number(e.giden||0);
+  let detail=e.mergedWithBank?'Banka ekstresiyle eşleşti, mükerrer sayılmadı.':'Manuel kayıt';
+  if(v88IsChequeIn(e.type)){
+    // Kullanıcı yanlışlıkla çıkış alanına yazdıysa bile alınan çek nakit akışında giriş sayılır.
+    const amount=gelen || giden;
+    gelen=Number(amount||0); giden=0;
+    detail='Alınan çek: tarih alanı tahsil/vade tarihi kabul edildi. '+detail;
+  }else if(v88IsChequeOut(e.type)){
+    // Kullanıcı yanlışlıkla giriş alanına yazdıysa bile verilen çek nakit akışında çıkış sayılır.
+    const amount=giden || gelen;
+    giden=Number(amount||0); gelen=0;
+    detail='Verilen çek: tarih alanı ödeme/vade tarihi kabul edildi. '+detail;
+  }
+  return {
+    dateKey:e.date,
+    type:e.type||'Manuel',
+    title:e.title||'',
+    gelen,
+    giden,
+    detail,
+    source:e.mergedWithBank?'Manuel / Banka ile eşleşti':'Manuel',
+    manualId:e.id,
+    rawSource:'manual'
+  };
+}
+
+// V87 fonksiyonlarını çek vadesi mantığıyla override et.
+v87ManualTypeIsCash = v88ManualTypeIsCash;
+v87ManualEventToCalendarEvent = v88ManualEventToCalendarEvent;
+
+// Manuel ekleme override: çeklerde tarih=vade kabul edilir ve yön otomatik düzeltilir.
+addCashflowManualEvent=function(){
+  const date=document.getElementById('cashflowManualDate')?.value||'';
+  const type=document.getElementById('cashflowManualType')?.value||'Diğer';
+  const title=(document.getElementById('cashflowManualTitle')?.value||'').trim();
+  let gelen=invoiceNumber(document.getElementById('cashflowManualIn')?.value||0);
+  let giden=invoiceNumber(document.getElementById('cashflowManualOut')?.value||0);
+  if(!date || !title){alert('Tarih ve açıklama yazmalısın. Çeklerde bu tarih vade/tahsil/ödeme tarihi kabul edilir.');return;}
+  if(v88IsChequeIn(type)){
+    const amount=gelen || giden;
+    gelen=Number(amount||0); giden=0;
+  }else if(v88IsChequeOut(type)){
+    const amount=giden || gelen;
+    giden=Number(amount||0); gelen=0;
+  }
+  const candidate={id:'candidate',date,type,title,gelen,giden};
+  const imported=v87ImportedBhdEvents(false);
+  const dupBank=v87FindDuplicateImportedEvent(candidate,imported);
+  const dupManual=(cashflowManualEvents||[]).find(x=>v87EventDuplicateSignature(v87ManualEventToCalendarEvent(x))===v87EventDuplicateSignature(v87ManualEventToCalendarEvent(candidate)) && v87TextSimilarity(x.title,title)>=0.18);
+  if(dupBank){
+    alert('Bu manuel hareket banka ekstresindeki bir hareketle eşleşiyor. Mükerrer olmaması için manuel kayıt eklenmedi.');
+    return;
+  }
+  if(dupManual){
+    alert('Bu manuel harekete çok benzeyen bir manuel kayıt zaten var. Mükerrer olmaması için eklenmedi.');
+    return;
+  }
+  cashflowManualEvents.push({id:Date.now(),date,type,title,gelen,giden,mergedWithBank:false});
+  cashflowSaveManual();
+  document.getElementById('cashflowManualTitle').value='';
+  document.getElementById('cashflowManualIn').value='';
+  document.getElementById('cashflowManualOut').value='';
+  cashflowSelectedKey=date;
+  cashOnlySelectedKey=date;
+  const [y,m]=date.split('-').map(Number);
+  cashflowCurrentDate=new Date(y,m-1,1);
+  cashOnlyCurrentDate=new Date(y,m-1,1);
+  renderAllCalendars();
+};
+
+renderCashOnlyDayDetail=function(rows){
+  const el=document.getElementById('cashOnlyDayDetail'); if(!el)return;
+  const gelen=rows.reduce((s,x)=>s+(x.gelen||0),0), giden=rows.reduce((s,x)=>s+(x.giden||0),0), net=gelen-giden;
+  let html=`<div class="cashflow-detail-title">${cashflowKeyToDisplay(cashOnlySelectedKey)} Nakit Akışı</div><div class="cashflow-detail-sub">Kredi kartı harcamaları burada gider sayılmaz. Kredi kartı ödemesi, banka hesabı hareketi, çek tahsilatı ve çek ödemesi gerçek nakit hareketi kabul edilir.</div>`;
+  if(!rows.length){html+='<div class="cashflow-empty">Bu gün için gerçek nakit hareketi yok. Alış/satış faturaları Genel Takvimde görünür; burada sadece fiili nakit giriş/çıkış görünür.</div>';}
+  const groups={}; rows.forEach(r=>{const k=r.type||'Diğer'; if(!groups[k])groups[k]=[]; groups[k].push(r);});
+  Object.keys(groups).forEach(type=>{
+    html+=`<div class="cashflow-event-group"><h4>${escapeHtml(type)}</h4>`;
+    groups[type].forEach(r=>{
+      html+=`<div class="cashflow-event"><div><strong>${escapeHtml(r.title||'')}</strong><small>${escapeHtml(r.detail||'')}</small><small>${escapeHtml(r.source||'')}</small>${r.manualId?`<small><button class="detail-toggle" type="button" onclick="removeCashflowManualEvent('${r.manualId}')">Sil</button></small>`:''}</div><div class="amounts">${r.gelen?`<div class="in">+ ${invoiceFormatTL(r.gelen)}</div>`:''}${r.giden?`<div class="out">- ${invoiceFormatTL(r.giden)}</div>`:''}<div class="net">${invoiceFormatTL((r.gelen||0)-(r.giden||0))}</div></div></div>`;
+    });
+    html+='</div>';
+  });
+  html+=`<div class="cashflow-balance"><h4>Günün Gerçek Nakit Akışı</h4><div class="cashflow-balance-grid"><div><span>Hesaba Giren / Tahsil Edilen</span><strong class="positive">${invoiceFormatTL(gelen)}</strong></div><div><span>Hesaptan Çıkan / Ödenen</span><strong class="negative">${invoiceFormatTL(giden)}</strong></div><div><span>Net Nakit</span><strong class="${net>=0?'positive':'negative'}">${invoiceFormatTL(net)}</strong></div><div><span>Nakit Hareket Sayısı</span><strong>${rows.length}</strong></div></div></div>`;
+  el.innerHTML=html;
+};
+
+if(typeof renderAllCalendars==='function') renderAllCalendars();
+
+</script>
+  <link rel="stylesheet" href="assets/css/003-style.css">
+
+<link rel="stylesheet" href="assets/css/004-style.css">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link id="v155-invoice-detail-toggle-style" rel="stylesheet" href="assets/css/005-v155-invoice-detail-toggle-style.css">
+<!-- V147: Fatura analiz kırılım tabloları kaldırıldı, tevkifat/istisna/iade normal toplam dışı bırakıldı. -->
+
+<link id="v154-estetik-font-ve-aylik-cizgiler" rel="stylesheet" href="assets/css/006-v154-estetik-font-ve-aylik-cizgiler.css">
+
+<link id="v163-bhd-sirket-panel-css" rel="stylesheet" href="assets/css/007-v163-bhd-sirket-panel-css.css">
+
+
+<link id="v171-invoice-company-analysis-css" rel="stylesheet" href="assets/css/008-v171-invoice-company-analysis-css.css">
+
+<link id="v236-omas-branding-css" rel="stylesheet" href="assets/css/009-v236-omas-branding-css.css">
+<script id="v236-omas-branding-js" src="assets/js/003-v236-omas-branding-js.js"></script>
+
+
+<link id="v282-cari-material-cards-css" rel="stylesheet" href="assets/css/010-v282-cari-material-cards-css.css?v=20260727_payment_edit2">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/000-supabase-config.js"></script>
+<script id="omas-no-app-localstorage-js" src="assets/js/0000-omas-no-app-localstorage.js?v=20260728_no_app_localstorage"></script>
+<script id="omas-auth-gate-js" src="assets/js/0001-omas-auth-gate.js"></script>
+<script id="omas-supabase-xml-sync-js" src="assets/js/0002-omas-supabase-xml-sync.js"></script>
+<script id="omas-supabase-runtime-bootstrap-js" src="assets/js/0011-supabase-runtime-bootstrap.js?v=20260728_invoice_line_state_runtime"></script>
+<link id="omas-auth-gate-css" rel="stylesheet" href="assets/css/000-omas-auth-gate.css">
+</head>
+<body>
+
+<link id="v233-xml-category-integration-css" rel="stylesheet" href="assets/css/011-v233-xml-category-integration-css.css">
+<script id="v233-xml-category-integration-js" src="assets/js/004-v233-xml-category-integration-js.js"></script>
+
+<link id="v234-xml-memory-manager-css" rel="stylesheet" href="assets/css/012-v234-xml-memory-manager-css.css">
+<script id="v234-xml-memory-manager-js" src="assets/js/005-v234-xml-memory-manager-js.js"></script>
+
+
+<link id="v237-category-tools-css" rel="stylesheet" href="assets/css/013-v237-category-tools-css.css">
+
+
+
+
+
+<link id="v235-xml-category-search-css" rel="stylesheet" href="assets/css/014-v235-xml-category-search-css.css">
+<script id="v235-xml-category-search-js" src="assets/js/006-v235-xml-category-search-js.js"></script>
+<script id="v225-head-invoice-menu-router" src="assets/js/007-v225-head-invoice-menu-router.js?v=20260728_remove_invoice_report"></script>
+<div class="top-menu-bar">
+  <div class="top-menu-title"><img class="top-menu-logo" src="file:///C:/Users/mikro/Downloads/omas-logo.png" alt="ÖMAS"><span class="top-menu-brand-text">ÖMAS GRUP FİNANS</span></div>
+
+  
+  
+
+</div>
+
+
+
+
+<div id="customerCRMModal" class="customer-crm-modal" style="display:none!important" hidden>
+  <div class="customer-crm-box">
+    <div class="customer-crm-head">
+      <div><h2>Müşteri CRM Paneli</h2><small>Müşteri kartı, teklif geçmişi, ürün/kalem geçmişi, görüşme notları ve takip tarihi.</small></div>
+      <button class="quote-close-btn" type="button" onclick="closeCustomerCRM()">Kapat</button>
+    </div>
+    <div class="customer-crm-layout">
+      <div class="customer-panel">
+        <h3>Müşteriler</h3>
+        <div class="customer-search"><input id="customerSearchInput" type="text" placeholder="Müşteri / firma / telefon / sektör ara..." oninput="renderCustomerList()"></div>
+        <div class="customer-form-grid full">
+          <div class="customer-field"><label>Firma İsmi</label><input id="crmCompanyName"></div>
+          <div class="customer-field"><label>Yetkili Kişi</label><input id="crmContactName"></div>
+          <div class="customer-field"><label>Telefon</label><input id="crmPhone"></div>
+          <div class="customer-field"><label>E-posta</label><input id="crmEmail"></div>
+          <div class="customer-field"><label>Sektör</label><input id="crmSector"></div>
+          <div class="customer-field"><label>Şehir</label><input id="crmCity"></div>
+          <div class="customer-field"><label>Müşteri Durumu</label><select id="crmStatus"><option>Potansiyel</option><option>Aktif Müşteri</option><option>Takipte</option><option>Riskli / Beklemede</option><option>Kaybedildi</option></select></div>
+          <div class="customer-field"><label>Öncelik</label><select id="crmPriority"><option>Normal</option><option>Yüksek</option><option>Çok Yüksek</option><option>Düşük</option></select></div>
+          <div class="customer-field"><label>Sonraki Takip Tarihi</label><input id="crmNextFollowDate" type="date"></div>
+          <div class="customer-field"><label>Vergi No / Not</label><input id="crmTaxNo"></div>
+          <div class="customer-field"><label>Adres / Genel Not</label><textarea id="crmAddressNote"></textarea></div>
+        </div>
+        <div class="customer-toolbar">
+          <button class="quote-btn dark" type="button" onclick="newCustomerCard()">Yeni Müşteri</button>
+          <button class="quote-btn green" type="button" onclick="saveCustomerCard()">Müşteriyi Kaydet</button>
+          <button class="quote-btn red" type="button" onclick="deleteSelectedCustomer()">Sil</button>
+        </div>
+        <div id="customerList" class="customer-list"></div>
+      </div>
+      <div class="customer-panel">
+        <h3>Müşteri Detay Paneli</h3>
+        <div id="customerKpis" class="customer-kpi-grid"></div>
+        <div class="customer-tabs">
+          <button class="customer-tab active" onclick="setCustomerTab(&#39;overview&#39;)">Genel Bakış</button>
+          <button class="customer-tab" onclick="setCustomerTab(&#39;quotes&#39;)">Teklifler</button>
+          <button class="customer-tab" onclick="setCustomerTab(&#39;products&#39;)">Ürün/Kalemler</button>
+          <button class="customer-tab" onclick="setCustomerTab(&#39;notes&#39;)">Görüşme Notları</button>
+          <button class="customer-tab" onclick="setCustomerTab(&#39;timeline&#39;)">Zaman Çizelgesi</button>
+        </div>
+        <div id="customerSection_overview" class="customer-section active"></div>
+        <div id="customerSection_quotes" class="customer-section"></div>
+        <div id="customerSection_products" class="customer-section"></div>
+        <div id="customerSection_notes" class="customer-section"></div>
+        <div id="customerSection_timeline" class="customer-section"></div>
+      </div>
+      <div class="customer-panel">
+        <h3>Görüşme / Aksiyon Ekle</h3>
+        <div class="customer-form-grid full">
+          <div class="customer-field"><label>Görüşme Tarihi</label><input id="crmNoteDate" type="date"></div>
+          <div class="customer-field"><label>Görüşme Tipi</label><select id="crmNoteType"><option>Telefon</option><option>WhatsApp</option><option>E-posta</option><option>Toplantı</option><option>Teknik Görüşme</option><option>Fiyat Pazarlığı</option><option>Servis / Destek</option><option>Diğer</option></select></div>
+          <div class="customer-field"><label>Sonuç</label><select id="crmNoteResult"><option>Bilgi Alındı</option><option>Teklif İstedi</option><option>Teklif Gönderildi</option><option>Fiyat Bekliyor</option><option>Olumlu</option><option>Olumsuz</option><option>Tekrar Aranacak</option></select></div>
+          <div class="customer-field"><label>Sonraki Aksiyon Tarihi</label><input id="crmNoteNextDate" type="date"></div>
+          <div class="customer-field"><label>Not</label><textarea id="crmNoteText"></textarea></div>
+        </div>
+        <div class="customer-toolbar"><button class="quote-btn green" type="button" onclick="addCustomerNote()">Notu Kaydet</button></div>
+        <div class="quote-summary-box">
+          <h4>CRM Hatırlatmaları</h4>
+          <div class="quote-summary-line"><span>Son görüşme</span><strong id="crmLastContactMini">-</strong></div>
+          <div class="quote-summary-line"><span>Sonraki takip</span><strong id="crmNextFollowMini">-</strong></div>
+          <div class="quote-summary-line"><span>Açık teklif</span><strong id="crmOpenQuoteMini">0</strong></div>
+          <div class="quote-summary-line"><span>Toplam teklif değeri</span><strong id="crmQuoteValueMini">0 TL</strong></div>
+        </div>
+        <div id="customerSmartSuggestions" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="quoteCategoryModal" class="quote-category-modal">
+  <div class="quote-category-box">
+    <div class="quote-category-head">
+      <h3>Kategori Oluştur</h3>
+      <button class="quote-close-btn" type="button" onclick="closeQuoteCategoryModal()">Kapat</button>
+    </div>
+    <div class="quote-category-body">
+      <div class="quote-category-grid">
+        <div class="quote-field"><label>Ana Grup</label><input id="newQuoteMainGroup" placeholder="Örn: Motor Sürücüleri"></div>
+        <div class="quote-field"><label>Alt Grup</label><input id="newQuoteSubGroup" placeholder="Örn: i550 Serisi"></div>
+        <div class="quote-field"><label>Alt Alt Grup</label><input id="newQuoteSubSubGroup" placeholder="Örn: 1,5 kW"></div>
+        <button class="quote-btn green" type="button" onclick="saveQuoteCategoryPath()">Kaydet</button>
+      </div>
+      <div class="cashflow-empty" style="margin-top:12px">Örnek yapı: Motor Sürücüleri &gt; i550 Serisi &gt; 1,5 kW. Malzeme kaydederken bu kayıtlardan select ile seçeceksin.</div>
+      <div id="quoteCategoryList" class="quote-category-list"></div>
+    </div>
+  </div>
+</div>
+
+
+
+  <div class="global-calendar-buttons">
+    <button class="general-calendar-btn" type="button" onclick="openGlobalCalendar(&#39;general&#39;)">Takvim</button>
+    <button class="cash-calendar-btn" type="button" onclick="openGlobalCalendar(&#39;cash&#39;)">Nakit Akış Takvimi</button>
+  </div>
+
+  <div id="generalCalendarModal" class="calendar-modal">
+    <div class="calendar-modal-box">
+      <div class="calendar-modal-head">
+        <div><h2>Takvim</h2><small>Genel şirket hareketleri: alınan faturalar, kesilen faturalar, masraflar, çekler, banka ve kredi kartı hareketleri.</small></div>
+        <button class="calendar-close-btn" type="button" onclick="closeGlobalCalendar(&#39;general&#39;)">Kapat</button>
+      </div>
+      <div class="cashflow-calendar-wrapper in-modal">
+        <h3 class="cashflow-title">Takvim <small>Güne tıkla; o günün tüm finansal hareketlerini gör.</small></h3>
+        <div class="cashflow-layout">
+          <div class="cashflow-calendar-panel">
+            <div class="cashflow-toolbar">
+              <button type="button" onclick="cashflowChangeMonth(-1)">← Önceki</button>
+              <h3 id="cashflowMonthTitle">MAYIS 2026 • 1 hareket</h3>
+              <button type="button" onclick="cashflowChangeMonth(1)">Sonraki →</button>
+            </div>
+            <div class="cashflow-weekdays"><div>Pzt</div><div>Sal</div><div>Çar</div><div>Per</div><div>Cum</div><div>Cmt</div><div>Paz</div></div>
+            <div id="cashflowCalendarDays" class="cashflow-days"></div>
+            <div class="cashflow-manual-form">
+              <h4>Çek / manuel finansal hareket ekle</h4>
+              <div class="cashflow-manual-grid">
+                <input type="date" id="cashflowManualDate">
+                <select id="cashflowManualType">
+                  <option>Çek Verilen</option>
+                  <option>Çek Alınan</option>
+                  <option>Kredi Kartı Harcaması</option>
+                  <option>Tahsilat</option>
+                  <option>Ödeme</option>
+                  <option>Diğer</option>
+                </select>
+                <input type="text" id="cashflowManualTitle" placeholder="Kime / kimden / açıklama">
+                <input type="text" id="cashflowManualIn" placeholder="Gelen">
+                <input type="text" id="cashflowManualOut" placeholder="Giden">
+                <button class="primary-button" type="button" onclick="addCashflowManualEvent()">Ekle</button>
+              </div>
+            </div>
+          </div>
+          <div class="cashflow-detail-panel"><div id="cashflowDayDetail"><div class="cashflow-empty">Takvim a??l?nca g?n detaylar? burada g?r?nt?lenir.</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="cashOnlyCalendarModal" class="calendar-modal">
+    <div class="calendar-modal-box">
+      <div class="calendar-modal-head">
+        <div><h2>Nakit Akış Takvimi</h2><small>Sadece banka ve kredi kartı hareketleri üzerinden gerçek nakit giriş/çıkışını gösterir.</small></div>
+        <button class="calendar-close-btn" type="button" onclick="closeGlobalCalendar(&#39;cash&#39;)">Kapat</button>
+      </div>
+      <div class="cashflow-calendar-wrapper in-modal">
+        <div class="cashflow-layout">
+          <div class="cashflow-calendar-panel">
+            <div class="cashflow-toolbar">
+              <button type="button" onclick="cashOnlyChangeMonth(-1)">← Önceki</button>
+              <h3 id="cashOnlyMonthTitle">-</h3>
+              <button type="button" onclick="cashOnlyChangeMonth(1)">Sonraki →</button>
+            </div>
+            <div class="cashflow-weekdays"><div>Pzt</div><div>Sal</div><div>Çar</div><div>Per</div><div>Cum</div><div>Cmt</div><div>Paz</div></div>
+            <div id="cashOnlyCalendarDays" class="cashflow-days"></div>
+            <div class="cashflow-empty" style="margin-top:14px">Bu takvim fatura tarihlerini değil, BHD modülünden okunan banka/kredi kartı hareket tarihlerini esas alır.</div>
+          </div>
+          <div class="cashflow-detail-panel"><div id="cashOnlyDayDetail"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main id="home" class="page" style="display: flex;">
+    <div class="container">
+      <div class="header"><h1>ÖMAS GRUP FİNANS</h1><p>İşlem yapmak istediğin modülü seç.</p></div>
+      <div class="menu-grid">
+        <div class="menu-card" onclick="openModule(&#39;invoiceModule&#39;)"><h2>Fatura Karşılaştırma</h2><p>Alış ve satış faturalarını karşılaştırır, farkları ve kontrol edilmesi gereken kalemleri gösterir.</p><button type="button">Fatura Karşılaştırmaya Git</button></div>
+        <div class="menu-card" onclick="openModule(&#39;bhdModule&#39;)"><h2>Banka Hareket Dökümü Analiz</h2><p>PDF kredi kartı ekstresi veya XLS/XLSX/CSV banka hareketlerini otomatik analiz eder.</p><button type="button">BHD Analize Git</button></div>
+        <div class="menu-card" onclick="openModule(&#39;invoiceAnalysisModule&#39;)"><h2>Fatura Analiz Motoru</h2><p>Aylık veya yıllık alış/satış/masraf dosyalarını aynı ekranda birleştirir; ciro, alış, masraf, komisyon ve net kârı hesaplar.</p><button type="button">Fatura Analizine Git</button></div>
+        <div class="menu-card" onclick="openModule(&#39;cariCardsModule&#39;); if(window.v282RenderCariCards) setTimeout(window.v282RenderCariCards,50);"><h2>Cari Kartlar</h2><p>Firma bazında alış, satış, proje, banka hareketi, ödeme ve tahsilat geçmişini tek cari kartta gösterir.</p><button type="button">Cari Kartlara Git</button></div>
+        <div class="menu-card" onclick="openModule(&#39;materialCardsModule&#39;); if(window.v282RenderMaterialCards) setTimeout(window.v282RenderMaterialCards,50);"><h2>Malzeme Kartları</h2><p>Malzeme adına göre hangi firmadan kaça aldığını, döviz bilgisini ve kime sattığını gösterir.</p><button type="button">Malzeme Kartlarına Git</button></div>
+        <div class="menu-card" onclick="window.location.href=&#39;maliyet_hesaplama_motoru.html&#39;"><h2>Maliyet Hesaplama Motoru</h2><p>ÖMAS saat maliyet panelini kendi tam ekran HTML dosyası olarak açar. Renkleri, tabloları ve kendi çalışma düzeni bozulmaz.</p><button type="button">Maliyet Motoruna Git</button></div>
+        
+        
+      </div>
+    </div>
+  </main>
+
+  <section id="invoiceModule" class="module"><div class="module-box"><div class="module-title"><h2>Fatura Karşılaştırma</h2><button class="back-button" onclick="goHome()">Ana Sayfa</button></div><div class="placeholder">Buraya daha önce yaptığımız <strong>Fatura Karşılaştırma Aracı</strong> kodu taşınacak.</div></div></section>
+
+
+
+
+  
+
+  <section id="invoiceAnalysisModule" class="module v192-wide-invoice-module" style="display: none;">
+    <div class="module-box">
+      <div class="module-title"><h2>Fatura Analiz Motoru</h2><button class="back-button" onclick="goHome()">Ana Sayfa</button></div><div id="v189InvoiceShell">
+      <aside id="v189InvoiceSide" style="display: block !important; visibility: visible !important; pointer-events: auto !important; min-width: 190px !important; width: 220px !important; position: relative !important; z-index: 999 !important;">
+        <div class="v189-side-title">Fatura Modülü</div>
+        <button type="button" data-v189-page="xml" class="" style="display: flex !important; pointer-events: auto !important; visibility: visible !important; align-items: center !important; min-height: 38px !important; width: 100% !important; opacity: 1 !important; cursor: pointer !important;">Fatura XML Oku</button><button type="button" data-v189-page="analysis" class="" style="display: flex !important; pointer-events: auto !important; visibility: visible !important; align-items: center !important; min-height: 38px !important; width: 100% !important; opacity: 1 !important; cursor: pointer !important;">Fatura Analiz</button>
+        <button type="button" data-v189-page="expenses" class="" style="display: flex !important; pointer-events: auto !important; visibility: visible !important; align-items: center !important; min-height: 38px !important; width: 100% !important; opacity: 1 !important; cursor: pointer !important;">Giderler</button>
+        <button type="button" data-v189-page="categorize" class="active" style="display: flex !important; pointer-events: auto !important; visibility: visible !important; align-items: center !important; min-height: 38px !important; width: 100% !important; opacity: 1 !important; cursor: pointer !important;">Fatura Kalemlerini Kategorile</button>
+<button type="button" data-v189-page="category" class="locked" style="display: flex !important; pointer-events: auto !important; visibility: visible !important; align-items: center !important; min-height: 38px !important; width: 100% !important; opacity: 1 !important; cursor: pointer !important;">Kategori Raporu</button><button type="button" data-v189-page="company" class="" style="display: flex !important; pointer-events: auto !important; visibility: visible !important; align-items: center !important; min-height: 38px !important; width: 100% !important; opacity: 1 !important; cursor: pointer !important;">Firma Bazlı Analiz</button><button type="button" data-v189-page="project" class="" style="display: flex !important; pointer-events: auto !important; visibility: visible !important; align-items: center !important; min-height: 38px !important; width: 100% !important; opacity: 1 !important; cursor: pointer !important;">Proje Yönetimi</button><button type="button" data-v189-page="projectGrs" class="" style="display: flex !important; pointer-events: auto !important; visibility: visible !important; align-items: center !important; min-height: 38px !important; width: 100% !important; opacity: 1 !important; cursor: pointer !important;">Proje Yönetimi GRS</button><button type="button" data-v189-page="memory" class="" style="display: flex !important; align-items: center !important; min-height: 38px !important; width: 100% !important; visibility: visible !important; pointer-events: auto !important; opacity: 1 !important; cursor: pointer !important;">Kalıcı Hafıza Yönetimi</button>
+      </aside>
+      <main id="v189InvoiceMain" style="min-width: 0px !important;"><section id="v189PageXml" class="v189-page" style="display: none;"><div class="v189-page-head"><h3>Fatura XML Oku</h3><span>Çoklu XML/UBL fatura kalem okuma.</span></div><div id="v235XmlSearchBox" class="v235-search"><div><label>Arama</label><input id="v235XmlSearch" type="search" placeholder="Fatura no, satıcı/firma, dosya adı veya kalem ara"></div><button type="button" id="v235XmlSearchClear">Temizle</button><div class="v235-hit" id="v235XmlSearchHit" style="grid-column:1/-1">834 satır</div></div><div class="v226-xml-box"><strong>XML / UBL faturaları seç</strong><div class="v226-xml-actions"><input id="v233XmlFiles" type="file" accept=".xml,.ubl,text/xml,application/xml" multiple=""><button type="button" id="v233XmlRead">Oku</button></div><div class="v226-xml-note">Birden fazla dosya seçebilirsin. Okunan kalemler Kategori Raporu ekranına gider.</div></div><div id="v231XmlOut" class="v226-empty">XML fatura ?zeti haz?rlan?yor. Sayfa a??l?nca fatura toplamlar? burada tek sat?r/fatura olarak g?sterilecek.</div></section>
+        <section id="v189PageAnalysis" class="v189-page" style="display: none;"><div class="v189-page-head"><h3>Fatura Analiz</h3><span>Tek analiz butonu</span></div><div id="v189UploadGrid" class="v189-upload-grid"><div class="upload-area">
+          <strong>Alış Faturaları Yükle</strong><br><small>Desteklenen formatlar: .xlsx, .xls, .csv</small>
+          <input type="file" id="purchaseInvoiceFiles" accept=".xlsx,.xls,.csv" multiple="">
+        </div><div class="upload-area">
+          <strong>Satış Faturaları Yükle</strong><br><small>Desteklenen formatlar: .xlsx, .xls, .csv</small>
+          <input type="file" id="salesInvoiceFiles" accept=".xlsx,.xls,.csv" multiple="">
+        </div><div class="upload-area">
+          <strong>Masraf Fişleri Yükle</strong><br><small>Desteklenen formatlar: .xlsx, .xls, .csv</small>
+          <input type="file" id="expenseReceiptFiles" accept=".xlsx,.xls,.csv" multiple="">
+        </div><div class="upload-area">
+          <strong>Gider Pusulası</strong><br><small>KDV dahil tutarı ve oranlara göre KDV tutarlarını gir. Kaydet deyince tarayıcıda saklanır ve analiz/rapora dahil edilir.</small>
+          <div class="gider-pusulasi-form">
+            <div class="gider-pusulasi-field">
+              <label for="giderPusulasiAmount">KDV DAHİL TUTAR</label>
+              <input type="text" id="giderPusulasiAmount" placeholder="Örn: 12500,00">
+            </div>
+            <div class="gider-pusulasi-field">
+              <label for="giderPusulasiKdv20">%20 KDV</label>
+              <input type="text" id="giderPusulasiKdv20" placeholder="Örn: 1200,00">
+            </div>
+            <div class="gider-pusulasi-field">
+              <label for="giderPusulasiKdv10">%10 KDV</label>
+              <input type="text" id="giderPusulasiKdv10" placeholder="Örn: 350,00">
+            </div>
+            <div class="gider-pusulasi-field">
+              <label for="giderPusulasiKdv1">%1 KDV</label>
+              <input type="text" id="giderPusulasiKdv1" placeholder="Örn: 25,00">
+            </div>
+          </div>
+          <div class="actions" style="margin-top:10px;align-items:center;">
+            <button class="primary-button" type="button" onclick="saveGiderPusulasiAmount()">Kaydet</button>
+            <span class="small">Kayıtlı KDV Dahil: <strong id="savedGiderPusulasiAmount">0,00 TL</strong></span>
+          </div>
+        </div></div><div id="v210InvoiceUploadFeedback">Henüz dosya seçilmedi.</div><div class="actions">
+        <button class="primary-button" onclick="analyzeInvoiceProfit()">Faturaları Analiz Et</button>
+        <button class="secondary-button" id="downloadInvoiceProfitBtn" onclick="downloadInvoiceProfitReport()">Fatura Analizi Yönetici Raporu</button><button id="invoiceA4ExcelBtnV175" class="secondary-button" type="button" style="display: none;">Tablo Excel Raporu</button>
+        <button class="secondary-button" type="button" onclick="clearInvoiceYearlyMemory()">Yıllık Hafızayı Temizle</button>
+      </div><div id="invoiceAnalysisStatus" class="status"></div><div id="invoiceAnalysisResults" style="display:none;">
+
+        <div class="invoice-summary-wrapper">
+          <h3 class="invoice-summary-main-title">Son Yüklenen Ay / Aktif Analiz Özeti</h3>
+          <div class="invoice-summary-board">
+          <div class="invoice-summary-col">
+            <h3>Alış Faturaları</h3>
+            <div id="purchaseSummaryRates" class="plain-kdv-lines">-</div>
+          </div>
+          <div class="invoice-summary-col">
+            <h3>Gider Fişleri</h3>
+            <div id="expenseSummaryRates" class="plain-kdv-lines">-</div>
+          </div>
+          <div class="invoice-summary-col">
+            <h3>Gider Pusulası</h3>
+            <div class="plain-kdv-lines">
+              <div class="summary-line"><span>KDV Matrah</span><strong id="giderPusulasiMatrahSummary">0,00 TL</strong></div>
+              <div class="summary-line"><span>%1 KDV</span><strong id="giderPusulasiKdv1Summary">0,00 TL</strong></div>
+              <div class="summary-line"><span>%10 KDV</span><strong id="giderPusulasiKdv10Summary">0,00 TL</strong></div>
+              <div class="summary-line"><span>%20 KDV</span><strong id="giderPusulasiKdv20Summary">0,00 TL</strong></div>
+              <div class="summary-line indirilecek"><span>İndirilecek KDV</span><strong id="giderPusulasiKdvTotalSummary">0,00 TL</strong></div>
+              <div class="summary-line total"><span>KDV Dahil Toplam Tutar</span><strong id="giderPusulasiSummaryTotal">0,00 TL</strong></div>
+            </div>
+          </div>
+          <div class="invoice-summary-col">
+            <h3>Satış Faturaları</h3>
+            <div id="salesSummaryRates" class="plain-kdv-lines">-</div>
+          </div>
+          <div class="invoice-summary-col summary summary-separator">
+            <h3>Özet</h3>
+            <div class="summary-line"><span>Brüt Kâr</span><strong id="grossProfitTotal">0 TL</strong></div>
+            <div class="summary-line"><span>Brüt Kâr Oranı</span><strong id="grossProfitRate">%0</strong></div>
+            <div class="summary-line"><span>Net Kâr</span><strong id="netProfitTotal">0 TL</strong></div>
+            <div class="summary-line"><span>Net Kâr Oranı</span><strong id="netProfitRate">%0</strong></div>
+            <div class="summary-line"><span>Komisyonlar</span><strong id="commissionTotalSummary">90.087,23 TL</strong></div>
+            <div class="summary-line"><span>Maaş / SGK / Diğer Giderler</span><strong id="profitExpenseTotalSummary">0 TL</strong></div>
+            <div class="summary-line"><span id="vatDifferenceLabel">Ödenecek KDV</span><strong id="vatDifferenceTotal">0 TL</strong></div>
+            <div class="summary-line"><span>Hesap Dışı Faturalar</span><strong id="excludedInvoiceCount">0</strong></div>
+          </div>
+          </div>
+        </div><div id="v187AllSummary" class="v187-summary-all"><div class="v187-summary-card"><span>Toplam Satış</span><strong id="v187SalesAll">-</strong></div><div class="v187-summary-card"><span>Toplam Alış + Masraf</span><strong id="v187CostAll">0 TL</strong></div><div class="v187-summary-card"><span>Net Kâr</span><strong id="v187NetAll">0 TL</strong></div><div class="v187-summary-card"><span>Özel / Hesap Dışı</span><strong id="v187SpecialAll">0</strong></div></div>
+        <div style="display:none">
+          <strong id="purchaseNetTotal">0 TL</strong>
+          <strong id="purchaseVatTotal">0 TL</strong>
+          <strong id="salesNetTotal">0 TL</strong>
+          <strong id="salesVatTotal">0 TL</strong>
+          <strong id="expenseReceiptTotal">0 TL</strong>
+          <strong id="invoiceVatRates">-</strong>
+        </div>
+
+        <h3 class="section-title">Aylık / Yıllık Özet</h3>
+        <div class="table-wrap"><table id="invoiceMonthlyTable"><thead></thead><tbody></tbody></table></div><div id="v187SpecialShell" class="v187-special-shell"><div class="v187-special-head"><div><h3>Özel Fatura Sekmeleri</h3><small>Tevkifat, istisna, iade ve hesap dışı faturalar tek alanda açılır.</small></div><div id="v187SpecialTabs" class="v187-special-tabs"><button type="button" class="active" onclick="window.setV187SpecialTab(&#39;tevkifatInvoiceTable&#39;)">Tevkifatlı <span>(0)</span></button><button type="button" class="" onclick="window.setV187SpecialTab(&#39;istisnaInvoiceTable&#39;)">İstisna <span>(0)</span></button><button type="button" class="" onclick="window.setV187SpecialTab(&#39;returnInvoiceTable&#39;)">İade <span>(0)</span></button><button type="button" class="" onclick="window.setV187SpecialTab(&#39;excludedInvoiceTable&#39;)">Hesap Dışı <span>(0)</span></button></div></div><div id="v187SpecialContent"><div id="v187Pane_tevkifatInvoiceTable" class="v187-special-pane active"><h3 class="section-title">Tevkifatlı Faturalar</h3><div class="table-wrap"><table id="tevkifatInvoiceTable"><thead></thead><tbody></tbody></table></div></div><div id="v187Pane_istisnaInvoiceTable" class="v187-special-pane"><h3 class="section-title">İstisna Faturaları</h3><div class="table-wrap"><table id="istisnaInvoiceTable"><thead></thead><tbody></tbody></table></div></div><div id="v187Pane_returnInvoiceTable" class="v187-special-pane"><h3 class="section-title">İade Faturaları</h3><div class="table-wrap"><table id="returnInvoiceTable"><thead></thead><tbody></tbody></table></div></div><div id="v187Pane_excludedInvoiceTable" class="v187-special-pane"><h3 class="section-title">Hesap Dışı Faturalar</h3><div class="table-wrap"><table id="excludedInvoiceTable"><thead></thead><tbody></tbody></table></div></div></div></div>
+
+
+
+
+
+
+        <div id="invoiceA4ReportPanel" class="invoice-a4-report-panel" style="display: none;"><div class="invoice-a4-report-head"><div><h3>Fatura Analizi Yönetici Raporu</h3><small>A4 yatay yazdırılabilir özet: matrah, KDV, brüt kâr, kar marjı, firma dağılımı ve Konsept/Otomasyon karşılaştırması.</small></div><div class="invoice-a4-report-actions"><button type="button" onclick="renderInvoiceA4Report()">Rapor Oluştur</button><button class="green" type="button" onclick="exportInvoiceA4ReportExcel()">Excel'e Aktar</button><button class="dark" type="button" onclick="printInvoiceA4Report()">Yazdır / PDF</button></div></div><div id="invoiceA4ReportBody" class="invoice-a4-report-body"><div class="invoice-company-empty">Faturaları analiz ettikten sonra <strong>Rapor Oluştur</strong> butonuna bas.</div></div></div><div id="invoiceCompanyAnalysisPanel" class="invoice-company-panel" style="display: none;"><div class="invoice-company-head"><div><h3>Firma Bazlı Fatura Analizi</h3><small>Konsept / Otomasyon / Ortak ayrımına göre alış, satış, girdi, çıktı, KDV ve harcama yüzdeleri.</small></div><button class="primary-button" type="button" onclick="renderInvoiceCompanyAnalysis()">Yenile</button></div><div id="invoiceCompanyAnalysisBody" class="invoice-company-body"></div></div><div class="invoice-detail-toggle-panel">
+          <div>
+            <strong>Fatura Detay Görünümü</strong>
+            <small>O Aylık: son yüklediğin ay/dosyalar. Hepsi: hafızadaki bütün ayların faturaları.</small>
+          </div>
+          <div class="invoice-detail-toggle-buttons">
+            <button id="invoiceDetailCurrentBtn" type="button" onclick="setInvoiceDetailViewMode(&#39;current&#39;)">O Aylık</button>
+            <button id="invoiceDetailAllBtn" type="button" onclick="setInvoiceDetailViewMode(&#39;all&#39;)">Hepsi</button>
+          </div>
+        </div><div id="v203GlobalInvoiceSearch"><div><label>Fatura / masraf ara</label><input id="v203GlobalInvoiceInput" placeholder="Fatura no, firma, kaynak, tarih veya masraf kalemi yaz"><div id="v203GlobalInvoiceInfo">Tek arama; alış, satış ve masraf tablolarını birlikte filtreler.</div></div><button class="v203-clear" type="button" id="v203GlobalInvoiceClear">Temizle</button></div>
+
+        
+        
+
+        
+        
+
+        
+        
+
+        
+        
+
+        <h3 class="section-title">Alış Fatura Detayı</h3>
+        <div class="table-wrap"><table id="purchaseInvoiceTable"><thead></thead><tbody></tbody></table></div>
+
+        
+        
+
+        <h3 class="section-title">Satış Fatura Detayı</h3>
+        <div class="table-wrap"><table id="salesInvoiceTable"><thead></thead><tbody></tbody></table></div>
+      <div id="v208ExpenseSummaryHome"></div></div></section>
+        <section id="v189PageExpenses" class="v189-page" style="display: none;"><div class="v189-page-head"><h3>Giderler</h3><span>Otomatik kaydeder</span></div><div id="v189ExpenseSaveNote">Giderler kaydedildi, analiz güncellendi.</div><div id="v189ExpenseGrid" class="v189-expense-grid"><div class="upload-area v187-expense-source">
+          <strong>Komisyonlar</strong><br><small>Trendyol / pazaryeri / sanal POS komisyonlarını aylık gir. Fatura analizinde net kârdan düşülür ve rapora eklenir.</small>
+          <div id="invoiceCommissionGrid" class="commission-grid"><div class="commission-field"><label>OCAK</label><input type="text" id="invoiceCommission_0" value="16.848,60" placeholder="0,00"></div><div class="commission-field"><label>ŞUBAT</label><input type="text" id="invoiceCommission_1" value="8.114,63" placeholder="0,00"></div><div class="commission-field"><label>MART</label><input type="text" id="invoiceCommission_2" value="8.018,90" placeholder="0,00"></div><div class="commission-field"><label>NİSAN</label><input type="text" id="invoiceCommission_3" value="1,00" placeholder="0,00"></div><div class="commission-field"><label>MAYIS</label><input type="text" id="invoiceCommission_4" value="9.459,12" placeholder="0,00"></div><div class="commission-field"><label>HAZİRAN</label><input type="text" id="invoiceCommission_5" value="1.010,05" placeholder="0,00"></div><div class="commission-field"><label>TEMMUZ</label><input type="text" id="invoiceCommission_6" value="5.321,73" placeholder="0,00"></div><div class="commission-field"><label>AĞUSTOS</label><input type="text" id="invoiceCommission_7" value="5.738,53" placeholder="0,00"></div><div class="commission-field"><label>EYLÜL</label><input type="text" id="invoiceCommission_8" value="6.904,78" placeholder="0,00"></div><div class="commission-field"><label>EKİM</label><input type="text" id="invoiceCommission_9" value="9.134,05" placeholder="0,00"></div><div class="commission-field"><label>KASIM</label><input type="text" id="invoiceCommission_10" value="7.899,53" placeholder="0,00"></div><div class="commission-field"><label>ARALIK</label><input type="text" id="invoiceCommission_11" value="11.636,31" placeholder="0,00"></div></div>
+          <div class="actions" style="margin-top:10px;align-items:center;">
+            <button class="primary-button" type="button" onclick="saveInvoiceCommissions()">Komisyonları Kaydet</button>
+            <button class="secondary-button" type="button" onclick="clearInvoiceCommissions()">Temizle</button>
+            <span class="small">Kayıtlı Komisyon: <strong id="savedInvoiceCommissionTotal">90.087,23 TL</strong></span>
+          </div>
+        </div><div class="upload-area v187-expense-source" data-moved="1" style="grid-column: 1 / -1;">
+          <strong>Kar Giderleri</strong><br><small>Maaş, işveren SGK, kira, kargo, reklam, banka/POS, muhasebe vb. KDV hariç ticari giderleri aylık gir. KDV / kurumlar vergisi gibi gider yazılamayan vergileri buraya yazma.</small>
+          <div id="invoiceProfitExpenseGrid" class="commission-grid"></div>
+          <div class="actions" style="margin-top:10px;align-items:center;">
+            <button class="primary-button" type="button" onclick="saveInvoiceProfitExpenses()">Kar Giderlerini Kaydet</button>
+            <button class="secondary-button" type="button" onclick="clearInvoiceProfitExpenses()">Temizle</button>
+            <span class="small">Kayıtlı Kar Gideri: <strong id="savedInvoiceProfitExpenseTotal">0 TL</strong></span>
+          </div>
+        </div></div></section>
+        <section id="v189PageCategory" class="v189-page waiting" style="display: none;"><div class="v189-page-head"><div><h3>Kategori Raporu</h3><span>XML fatura kalemlerinden olusan kategori raporu.</span></div></div><div class="v264-empty">Kategori raporu Supabase verisinden dinamik olarak yuklenecek.</div></section><section id="v189PageCompany" class="v189-page waiting" style="display: none;"><div class="v270-empty">Firma bazli analiz Supabase verisinden dinamik olarak yuklenecek.</div></section><section id="v189PageMemory" class="v189-page waiting" style="display: none;"><div class="v226-empty">Kalici hafiza yonetimi dinamik olarak yuklenecek.</div></section><section id="v189PageProject" class="v189-page" style="display: none;"><div class="v189-page-head"><h3>Proje Yönetimi</h3><span>Proje kartları ve proje bazlı kar hesabı hazırlığı</span></div><div id="v247ProjectHost"></div></section>
+      <section id="v189PageProjectGrs" class="v189-page" style="display: none;"><div class="v189-page-head"><h3>Proje Yönetimi GRS</h3><span>Gayrı resmi satışlar için proje bazlı maliyet, satış, KDV ve kar takibi</span></div><div id="v256GrsHost"></div></section><section id="v189PageCategorize" class="v189-page waiting" style="display: none;"><div class="v270-empty">Fatura kalemleri Supabase verisinden dinamik olarak yuklenecek.</div></section></main></div>
+      <div class="info-box v189-muted-panel">
+        <strong>Yeni mantık:</strong> İster tek ay, ister Ocak-Aralık tüm <strong>alış faturalarını</strong> ve <strong>satış faturalarını</strong> Excel/CSV olarak aynı anda yükle. Sistem fatura tutarını KDV dahil kabul eder; KDV oranına göre matrahı ve KDV'yi ayırır; alış ve satış tarafını karşılaştırıp brüt kârı hesaplar.
+        <ul class="help-list">
+          <li><strong>Brüt Kâr:</strong> Satış Matrahı - Alış Matrahı</li>
+          <li><strong>Yıllık mantık:</strong> Birden fazla ay dosyasını peş peşe yükleyebilirsin; önceki aylar silinmez. Satırın ayı dosya içindeki tarihten değil, dosya adındaki aydan alınır. Örn: ŞUBAT dosyasındaki Ocak tarihli fiş Şubat ayına yazılır.</li>
+          <li><strong>KDV Farkı:</strong> Satış KDV - Alış KDV - Masraf Fişi KDV</li>
+          <li><strong>Masraf Fişleri ve Gider Pusulası:</strong> Ek gider olarak takip edilir. Gider pusulası KDV'siz kabul edilir ve tarayıcıda kayıtlı kalır.</li><li><strong>Önemli:</strong> Excel sonundaki toplam/genel toplam satırları hesaplamaya dahil edilmez; çift sayım engellenir.</li>
+          <li>Kolon adları farklıysa; Tutar, KDV Oranı, KDV, Matrah, Genel Toplam gibi başlıkları otomatik yakalamaya çalışır. Masraf fişlerinde KDV oranı açıklamadan değil; 0,01 / 0,1 / 0,2 başlıklı KDV tutar kolonundan okunur. Masraf fişleri tek tek dökülmez; masraf kalemi D sütunundan okunur. Özet tablo solda masraf kalemleri, üstte %1 / %10 / %20 KDV kırılımı şeklinde hazırlanır.</li>
+        </ul>
+      </div>
+
+      <div class="mini-grid">
+        
+        
+        
+        
+        
+        
+      </div>
+
+      <div id="v187ExpenseMenu" class="v187-expense-menu"><div><strong>Giderler</strong><small>Komisyonlar, kar giderleri ve kategori raporu analizden ayrı yönetilir.</small></div><div class="v187-menu-actions"><button class="secondary-button" type="button" data-v187-expense="commission">Komisyonlar</button><button class="secondary-button" type="button" data-v187-expense="profit">Kar Giderleri</button><button class="secondary-button" type="button" data-v187-expense="category">Kategori Raporu</button></div></div><div id="v187ExpenseDrawer" class="v187-expense-drawer"><div class="v187-expense-tabs"><button type="button" data-v187-expense-tab="commission" class="active">Komisyonlar</button><button type="button" data-v187-expense-tab="profit">Kar Giderleri</button><button type="button" data-v187-expense-tab="category">Kategori Raporu</button></div><div id="v187ExpensePaneCommission" class="v187-expense-pane active"></div><div id="v187ExpensePaneProfit" class="v187-expense-pane"></div><div id="v187ExpensePaneCategory" class="v187-expense-pane"></div></div>
+      
+
+      
+      
+    </div>
+  </section>
+
+
+  <section id="cariCardsModule" class="module">
+    <div class="module-box">
+      <div class="module-title"><h2>Cari Kartlar</h2><button class="back-button" onclick="goHome()">Ana Sayfa</button></div>
+      <div id="v282CariHost"></div>
+    </div>
+  </section>
+
+  <section id="materialCardsModule" class="module">
+    <div class="module-box">
+      <div class="module-title"><h2>Malzeme Kartları</h2><button class="back-button" onclick="goHome()">Ana Sayfa</button></div>
+      <div id="v282MaterialHost"></div>
+    </div>
+  </section>
+  <section id="bhdModule" class="module">
+    <div class="module-box">
+      <div class="module-title"><h2>Banka Hareket Dökümü Analiz</h2><button class="back-button" onclick="goHome()">Ana Sayfa</button></div><div id="bhdV267Subnav" class="bhd-v267-subnav"><button type="button" data-bhd-v267-view="analysis" class="active">BHD Analiz</button><button type="button" data-bhd-v267-view="category">Kategori Raporu</button></div>
+      <div class="info-box">
+        <strong>Yeni mantık:</strong> XLS/XLSX/CSV banka hareketi veya PDF kredi kartı ekstresi yükle. Sistem otomatik olarak dosya tipini anlar; harcama, tahsilat, transfer/virman, kredi kartı ödemesi, faiz, vergi, SGK, reklam, yakıt, kargo ve tedarikçi giderlerini ayırır.
+        <ul class="help-list"><li><strong>Gerçek gider</strong> ile <strong>ticari değer taşımayan aktarım</strong> ayrı tutulur.</li><li><strong>Faiz harcamaları</strong> ayrıca işaretlenir ve rapora ayrı sheet olarak eklenir.</li><li>Banka dosyalarında kuruş dahil ham gelen büyük tutarlar otomatik düzeltilir. Örn: 57071479 → 570.714,79 TL.</li><li>Birden fazla dosya aynı anda yüklenebilir.</li></ul>
+      </div>
+      <div class="info-box" style="margin-top:20px;">
+        <strong>Kategori Ekle</strong><br>
+        <small>Buraya yazdığın kategori isimleri, Firma Özeti tablosundaki seçim kutusunda görünür. Firma satırından kategori seçip <strong>Okey</strong> dersen o firma o kategoriye kaydedilir.</small>
+        <div class="category-form">
+          <input type="text" id="categoryName" placeholder="Kategori adı yaz. Örn: Malzeme, Maaş, Kargo, Reklam, Vergi">
+          <button class="primary-button" type="button" onclick="addManualCategory()">Kategori Ekle</button>
+        </div>
+        <div class="subcategory-form">
+          <select id="subcategoryParent"><option value="Vergi">Vergi</option><option value="Yemek">Yemek</option><option value="Market">Market</option><option value="Ticari Olmayan Transfer">Ticari Olmayan Transfer</option><option value="Faiz / Banka Ücreti">Faiz / Banka Ücreti</option><option value="Hesaplar Arası Transfer">Hesaplar Arası Transfer</option><option value="Ticari İşlem">Ticari İşlem</option><option value="Kredi Kartı Borç Ödeme">Kredi Kartı Borç Ödeme</option><option value="Masraflar">Masraflar</option></select>
+          <input type="text" id="subcategoryName" placeholder="Alt kategori adı. Örn: Hesaplar Arası Transfer">
+          <button class="primary-button" type="button" onclick="addManualSubcategory()">Alt Kategori Ekle</button>
+        </div>
+        <div id="manualCategoryList" class="personnel-list"><span class="personnel-chip">Vergi<button type="button" onclick="removeManualCategory(0)">×</button></span><span class="personnel-chip">Yemek<button type="button" onclick="removeManualCategory(1)">×</button></span><span class="personnel-chip">Market<button type="button" onclick="removeManualCategory(2)">×</button></span><span class="personnel-chip">Ticari Olmayan Transfer<button type="button" onclick="removeManualCategory(3)">×</button></span><span class="personnel-chip">Ticari Olmayan Transfer / Hesaplar Arası Transfer<button type="button" onclick="removeManualSubcategory(&#39;Ticari Olmayan Transfer&#39;,0)">×</button></span><span class="personnel-chip">Ticari Olmayan Transfer / Tenzil Ahmet Sevinçtekin<button type="button" onclick="removeManualSubcategory(&#39;Ticari Olmayan Transfer&#39;,1)">×</button></span><span class="personnel-chip">Faiz / Banka Ücreti<button type="button" onclick="removeManualCategory(4)">×</button></span><span class="personnel-chip">Hesaplar Arası Transfer<button type="button" onclick="removeManualCategory(5)">×</button></span><span class="personnel-chip">Ticari İşlem<button type="button" onclick="removeManualCategory(6)">×</button></span><span class="personnel-chip">Ticari İşlem / Malzeme Alışı<button type="button" onclick="removeManualSubcategory(&#39;Ticari İşlem&#39;,0)">×</button></span><span class="personnel-chip">Ticari İşlem / Cari Ödeme<button type="button" onclick="removeManualSubcategory(&#39;Ticari İşlem&#39;,1)">×</button></span><span class="personnel-chip">Ticari İşlem / Çek Ödemesi<button type="button" onclick="removeManualSubcategory(&#39;Ticari İşlem&#39;,2)">×</button></span><span class="personnel-chip">Ticari İşlem / Sipariş/Servis Ödemesi<button type="button" onclick="removeManualSubcategory(&#39;Ticari İşlem&#39;,3)">×</button></span><span class="personnel-chip">Ticari İşlem / Elektrik Gideri<button type="button" onclick="removeManualSubcategory(&#39;Ticari İşlem&#39;,4)">×</button></span><span class="personnel-chip">Kredi Kartı Borç Ödeme<button type="button" onclick="removeManualCategory(7)">×</button></span><span class="personnel-chip">Kredi Kartı Borç Ödeme / Teminat Mektubu Ödemesi<button type="button" onclick="removeManualSubcategory(&#39;Kredi Kartı Borç Ödeme&#39;,0)">×</button></span><span class="personnel-chip">Masraflar<button type="button" onclick="removeManualCategory(8)">×</button></span><span class="personnel-chip">Masraflar / HGS Masrafı<button type="button" onclick="removeManualSubcategory(&#39;Masraflar&#39;,0)">×</button></span><span class="personnel-chip">Masraflar / Su Faturası<button type="button" onclick="removeManualSubcategory(&#39;Masraflar&#39;,1)">×</button></span><span class="personnel-chip">Masraflar / Elektrik Gideri<button type="button" onclick="removeManualSubcategory(&#39;Masraflar&#39;,2)">×</button></span><span class="personnel-chip">Masraflar / İnternet Faturası<button type="button" onclick="removeManualSubcategory(&#39;Masraflar&#39;,3)">×</button></span></div>
+      </div>
+
+      <div class="info-box" style="margin-top:20px;">
+        <strong>Personel Ekle</strong><br>
+        <small>Buraya kaydettiğin kişiler, banka/kredi kartı açıklamasında geçerse otomatik olarak <strong>Personel Ödemeleri</strong> bölümünde takip edilir. Alternatif kelimeler alanına IBAN açıklamasında geçen kısa isimleri virgülle yazabilirsin.</small>
+        <div class="personnel-form">
+          <input type="text" id="personnelName" placeholder="Personel adı soyadı">
+          <input type="text" id="personnelAliases" placeholder="Alternatif arama kelimeleri, virgülle">
+          <button class="primary-button" type="button" onclick="addPersonnel()">Personel Ekle</button>
+        </div>
+        <div id="personnelList" class="personnel-list"><span class="personnel-chip">YUNUS EMRE YAZICIOĞLU<button type="button" onclick="removePersonnel(0)">×</button></span><span class="personnel-chip">MUHAMMED SEVİNÇTEKİN<button type="button" onclick="removePersonnel(1)">×</button></span></div>
+      </div>
+
+      <div class="upload-area">
+        <strong>Dosya Yükle</strong><br><small>Desteklenen formatlar: .xlsx, .xls, .csv, .pdf</small>
+        <input type="file" id="bhdFile" accept=".xlsx,.xls,.csv,.pdf" multiple="">
+        <div class="actions"><button class="primary-button" onclick="analyzeBHD()">Analiz Et</button><button class="secondary-button" id="downloadReportBtn" onclick="downloadBHDReport()" disabled="">Rapor Ver</button></div>
+        <div id="fileList" class="status"></div><div id="bhdStatus" class="status"></div>
+      </div>
+      <div id="bhdResults" style="display:none;">
+        <div class="kpi-grid">
+          <div class="kpi" onclick="showKpiDetails(&#39;gelen&#39;)"><span>Toplam Tahsilat / Gelen</span><strong id="totalIn">0 TL</strong></div>
+          <div class="kpi" onclick="showKpiDetails(&#39;giden&#39;)"><span>Toplam Harcama / Giden</span><strong id="totalOut">0 TL</strong></div>
+          <div class="kpi" onclick="showKpiDetails(&#39;ticari&#39;)"><span>Gerçek Ticari Gider</span><strong id="realExpense">0 TL</strong></div>
+          <div class="kpi" onclick="showKpiDetails(&#39;net&#39;)"><span>Net Nakit</span><strong id="totalNet">0 TL</strong></div>
+          <div class="kpi" onclick="showKpiDetails(&#39;transfer_gelen&#39;)"><span>Ticari Olmayan Transfer / Gelen</span><strong id="transferInTotal">0 TL</strong></div>
+          <div class="kpi" onclick="showKpiDetails(&#39;transfer_giden&#39;)"><span>Ticari Olmayan Transfer / Giden</span><strong id="transferOutTotal">0 TL</strong></div>
+          <div class="kpi" onclick="showKpiDetails(&#39;faiz&#39;)"><span>Faiz / Ücret</span><strong id="interestTotal">0 TL</strong></div>
+          <div class="kpi" onclick="showKpiDetails(&#39;reklam&#39;)"><span>Reklam Gideri</span><strong id="adTotal">0 TL</strong></div>
+          <div class="kpi" onclick="showKpiDetails(&#39;yakit&#39;)"><span>Yakıt Gideri</span><strong id="fuelTotal">0 TL</strong></div>
+        </div>
+        <div id="bhdCompanyPanel" class="bhd-company-panel">
+          <div class="bhd-company-head">
+            <div>
+              <h3>Para Nereye Gitti?  -  Şirket Bazlı BHD</h3>
+              <small>Bu panel BHD analizindeki hareketlerden otomatik dolar. Şirket bazında gelen/giden/net durumunu, kimden geldiğini, kime gittiğini ve harcamayı hangi tahsilatların finanse ettiğini gösterir.</small>
+            </div>
+            <div id="bhdCompanyTabs" class="bhd-company-tabs"></div>
+          </div>
+          <div class="bhd-company-body">
+            <div class="bhd-company-select-row">
+              <span class="small"><strong>Not:</strong> Şirket ayrımı kaynak dosya adı/açıklama üzerinden otomatik tahmin edilir. Yanlışsa aşağıdaki işlem detayından kategori tarafında olduğu gibi düzeltme mantığı eklenebilir.</span>
+            </div>
+            <div id="bhdCompanyContent"></div>
+          </div>
+        </div>
+        <h3 class="section-title">Kategori Butonları</h3>
+        <div class="category-toolbar">
+          <button class="primary-button" type="button" onclick="renderView(&#39;Firma Özeti&#39;)">Kategori / Alt Kategori Seçim Ekranı</button>
+          <div class="hint">Kategori butonları sadece hızlı detay gösterir. Firma bazlı <strong>Kategori / Alt Kategori SelectButton</strong> alanı <strong>Firma Özeti</strong> ekranında aynen korunur.</div>
+        </div>
+        <div class="kpi-grid" id="categoryKpiGrid"></div>
+        <div class="category-select-box-note">
+          Kategori veya alt kategori değiştirmek için: <strong>Firma Özeti</strong> sekmesine gir → firma satırındaki kategori/alt kategori seçimini yap → <strong>Okey</strong> butonuna bas.
+        </div>
+        <div class="tabs" id="viewTabs"></div>
+        <h3 id="tableTitle" class="section-title">Özet</h3>
+        <div class="table-wrap"><table id="bhdTable"><thead></thead><tbody></tbody></table></div>
+
+        <div id="manualCategorySection" style="display:none;">
+          <h3 class="section-title">Manuel Kategori Blokları</h3>
+          <div id="manualCategoryBlocks" class="manual-category-blocks"></div>
+        </div>
+      </div>
+    <div id="bhdCategoryReportPage"></div></div>
+  </section>
+
+
+  
+
+
+
+
+
+
+<script id="v283-hide-old-company-analysis-js" src="assets/js/008-v283-hide-old-company-analysis-js.js"></script>
+<script id="v282-cari-material-cards-js" src="assets/js/009-v282-cari-material-cards-js.js"></script>
+<script src="assets/js/010-script.js"></script>
+
+
+
+<script src="assets/js/011-script.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script id="v171-invoice-company-analysis-js" src="assets/js/012-v171-invoice-company-analysis-js.js"></script>\n
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- V123: Fotoğraf değil, procedural solid 3D beton santrali sahnesi -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script id="v163-bhd-sirket-panel-js" src="assets/js/013-v163-bhd-sirket-panel-js.js"></script>
+
+
+
+<script id="v167-bhd-company-selection-stable-fix" src="assets/js/014-v167-bhd-company-selection-stable-fix.js"></script>
+
+
+<link id="v169-bhd-dashboard-excel-fix-css" rel="stylesheet" href="assets/css/015-v169-bhd-dashboard-excel-fix-css.css">
+<script id="v169-bhd-dashboard-excel-fix-js" src="assets/js/015-v169-bhd-dashboard-excel-fix-js.js"></script>
+
+
+<script id="v170-para-nereye-gitti-final-fix" src="assets/js/016-v170-para-nereye-gitti-final-fix.js"></script>
+
+
+
+<script id="v176-mayis-rapor-sablonu-gomulu" src="assets/js/017-v176-mayis-rapor-sablonu-gomulu.js"></script>
+
+
+
+<script id="v177-report-empty-final-fix" src="assets/js/018-v177-report-empty-final-fix.js"></script>
+<script id="v222-es5-invoice-menu-router" src="assets/js/019-v222-es5-invoice-menu-router.js?v=20260728_remove_invoice_report"></script>
+
+<script id="v239-category-search-failsafe-js" src="assets/js/022-v239-category-search-failsafe-js.js"></script>
+
+
+<link id="v240-category-manager-search-css" rel="stylesheet" href="assets/css/016-v240-category-manager-search-css.css">
+<script id="v240-category-manager-search-js" src="assets/js/023-v240-category-manager-search-js.js"></script>
+
+
+<script id="v241-category-drilldown-js" src="assets/js/024-v241-category-drilldown-js.js"></script>
+
+
+<script id="v242-move-spend-under-search-js" src="assets/js/025-v242-move-spend-under-search-js.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script id="omas-project-cari-picker-js" src="assets/js/0016-omas-project-cari-picker.js?v=20260728_project_cari_select"></script>
+
+<script id="v246-inline-category-toggle-js" src="assets/js/026-v246-inline-category-toggle-js.js"></script>
+
+<link id="v256-grs-project-css" rel="stylesheet" href="assets/css/017-v256-grs-project-css.css">
+<script id="v256-grs-project-js" src="assets/js/027-v256-grs-project-js.js"></script>
+
+
+<link id="v257-memory-project-backup-css" rel="stylesheet" href="assets/css/018-v257-memory-project-backup-css.css">
+<script id="v257-memory-project-backup-js" src="assets/js/028-v257-memory-project-backup-js.js"></script>
+
+<script id="v261-fast-category-selection-js" src="assets/js/029-v261-fast-category-selection-js.js"></script>
+
+
+
+
+<link id="v258-company-xml-category-analysis-css" rel="stylesheet" href="assets/css/019-v258-company-xml-category-analysis-css.css">
+<script id="v258-company-xml-category-analysis-js" src="assets/js/030-v258-company-xml-category-analysis-js.js"></script>
+<link id="v264-hierarchical-category-report-css" rel="stylesheet" href="assets/css/020-v264-hierarchical-category-report-css.css">
+<script id="v264-hierarchical-category-report-js" src="assets/js/031-v264-hierarchical-category-report-js.js"></script>
+<link id="v267-final-category-bhd-css" rel="stylesheet" href="assets/css/021-v267-final-category-bhd-css.css"><script id="v267-final-category-bhd-js" src="assets/js/032-v267-final-category-bhd-js.js?v=20260728_bank_no_person_source"></script><script id="ziraat-kk-direct-reader-js" src="assets/js/0006-ziraat-kk-direct-reader.js?v=20260728_shopify_usd_tl_fix"></script><script id="isbank-kk-direct-reader-js" src="assets/js/0007-isbank-kk-direct-reader.js?v=20260728_isbank_end_date_maxipuan"></script><script id="ziraat-account-direct-reader-js" src="assets/js/0008-ziraat-account-direct-reader.js?v=20260728_ziraat_account_xlsx"></script><script id="halkbank-csv-direct-reader-js" src="assets/js/0009-halkbank-csv-direct-reader.js?v=20260728_halkbank_csv_ba_utf8"></script><script id="management-summary-excel-js" src="assets/js/0010-management-summary-excel.js?v=20260728_management_report_module"></script><link id="v263-company-r-summary-css" rel="stylesheet" href="assets/css/022-v263-company-r-summary-css.css">
+<script id="v263-company-r-summary-js" src="assets/js/033-v263-company-r-summary-js.js"></script>
+
+
+
+
+<link id="v174-invoice-a4-report-css" rel="stylesheet" href="assets/css/023-v174-invoice-a4-report-css.css">
+
+<script id="v174-invoice-a4-report-js" src="assets/js/034-v174-invoice-a4-report-js.js"></script>
+
+<link id="v175-invoice-report-no-inline-fix-css" rel="stylesheet" href="assets/css/024-v175-invoice-report-no-inline-fix-css.css">
+<script id="v175-invoice-report-no-inline-fix-js" src="assets/js/035-v175-invoice-report-no-inline-fix-js.js"></script>
+
+<script id="v178-compact-printable-excel-report" src="assets/js/036-v178-compact-printable-excel-report.js"></script>
+
+<script id="v179-invoice-category-analysis-final-js" src="assets/js/037-v179-invoice-category-analysis-final-js.js"></script>
+
+<!-- v181 final end override -->
+<link id="v181-invoice-category-manager-final-css" rel="stylesheet" href="assets/css/025-v181-invoice-category-manager-final-css.css">
+<script id="v181-invoice-category-manager-final-js" src="assets/js/038-v181-invoice-category-manager-final-js.js"></script>
+
+
+<!-- v182 final end override -->
+<script id="v182-category-manager-click-fix" src="assets/js/039-v182-category-manager-click-fix.js"></script>
+
+
+<!-- v183 final end override -->
+<script id="v183-category-manager-dedupe-fix" src="assets/js/040-v183-category-manager-dedupe-fix.js"></script>
+
+<!-- v184 category manage single-button guard -->
+<script id="v184-category-manage-single-button-guard" src="assets/js/041-v184-category-manage-single-button-guard.js"></script>
+<!-- v185 category manage single-button guard -->
+<script id="v185-category-manage-single-button-guard" src="assets/js/042-v185-category-manage-single-button-guard.js"></script>
+<!-- v186 category manage single-button guard -->
+<script id="v186-category-manage-single-button-guard" src="assets/js/043-v186-category-manage-single-button-guard.js"></script>
+
+<link id="v187-modern-simple-finance-ui-css" rel="stylesheet" href="assets/css/026-v187-modern-simple-finance-ui-css.css">
+<script id="v187-modern-simple-finance-ui-js" src="assets/js/044-v187-modern-simple-finance-ui-js.js"></script>
+
+<link id="v188-expense-drawer-visibility-fix" rel="stylesheet" href="assets/css/027-v188-expense-drawer-visibility-fix.css">
+
+<link id="v189-left-menu-finance-layout-css" rel="stylesheet" href="assets/css/028-v189-left-menu-finance-layout-css.css">
+<script id="v189-left-menu-finance-layout-js" src="assets/js/045-v189-left-menu-finance-layout-js.js"></script>
+
+<link id="v190-one-button-cleanup-css" rel="stylesheet" href="assets/css/029-v190-one-button-cleanup-css.css">
+<script id="v190-one-button-cleanup-js" src="assets/js/046-v190-one-button-cleanup-js.js"></script>
+
+<link id="v191-category-report-builder-css" rel="stylesheet" href="assets/css/030-v191-category-report-builder-css.css">
+<script id="v191-category-report-builder-js" src="assets/js/047-v191-category-report-builder-js.js"></script>
+
+<link id="v192-category-add-and-wide-layout-css" rel="stylesheet" href="assets/css/031-v192-category-add-and-wide-layout-css.css">
+<script id="v192-category-add-and-wide-layout-js" src="assets/js/048-v192-category-add-and-wide-layout-js.js"></script>
+
+<script id="v193-category-button-single-click-fix" src="assets/js/049-v193-category-button-single-click-fix.js"></script>
+
+<link id="v194-solid-category-manager-css" rel="stylesheet" href="assets/css/032-v194-solid-category-manager-css.css">
+<script id="v194-solid-category-manager-js" src="assets/js/050-v194-solid-category-manager-js.js"></script>
+
+<link id="v195-hide-duplicate-category-manager-css" rel="stylesheet" href="assets/css/033-v195-hide-duplicate-category-manager-css.css">
+<script id="v195-hide-duplicate-category-manager-js" src="assets/js/051-v195-hide-duplicate-category-manager-js.js"></script>
+
+<script id="v196-remove-duplicate-category-manager-js" src="assets/js/052-v196-remove-duplicate-category-manager-js.js"></script>
+
+<link id="v197-final-category-navigation-css" rel="stylesheet" href="assets/css/034-v197-final-category-navigation-css.css">
+<script id="v197-final-category-navigation-js" src="assets/js/053-v197-final-category-navigation-js.js"></script>
+
+<link id="v198-category-report-center-css" rel="stylesheet" href="assets/css/035-v198-category-report-center-css.css">
+<script id="v198-category-report-center-js" src="assets/js/054-v198-category-report-center-js.js"></script>
+
+<script id="v199-hard-navigation-category-center-js" src="assets/js/055-v199-hard-navigation-category-center-js.js"></script>
+
+<script id="v200-ready-navigation-fix-js" src="assets/js/056-v200-ready-navigation-fix-js.js"></script>
+
+<script id="v201-category-center-finalizer-js" src="assets/js/057-v201-category-center-finalizer-js.js"></script>
+
+<link id="v202-all-invoice-search-css" rel="stylesheet" href="assets/css/036-v202-all-invoice-search-css.css">
+<script id="v202-all-invoice-search-js" src="assets/js/058-v202-all-invoice-search-js.js"></script>
+
+<link id="v203-single-global-search-css" rel="stylesheet" href="assets/css/037-v203-single-global-search-css.css">
+<script id="v203-single-global-search-js" src="assets/js/059-v203-single-global-search-js.js"></script>
+
+<link id="v204-force-expense-summary-category-css" rel="stylesheet" href="assets/css/038-v204-force-expense-summary-category-css.css">
+<script id="v204-force-expense-summary-category-js" src="assets/js/060-v204-force-expense-summary-category-js.js"></script>
+
+<link id="v205-category-company-invoice-details-css" rel="stylesheet" href="assets/css/039-v205-category-company-invoice-details-css.css">
+<script id="v205-category-company-invoice-details-js" src="assets/js/061-v205-category-company-invoice-details-js.js"></script>
+
+<link id="v206-expandable-category-company-css" rel="stylesheet" href="assets/css/040-v206-expandable-category-company-css.css">
+<script id="v206-expandable-category-company-js" src="assets/js/062-v206-expandable-category-company-js.js"></script>
+
+<link id="v207-hide-old-company-analysis-css" rel="stylesheet" href="assets/css/041-v207-hide-old-company-analysis-css.css">
+<script id="v207-refresh-category-company-js" src="assets/js/063-v207-refresh-category-company-js.js"></script>
+
+<link id="v208-company-menu-category-clean-css" rel="stylesheet" href="assets/css/042-v208-company-menu-category-clean-css.css">
+<script id="v208-company-menu-category-clean-js" src="assets/js/064-v208-company-menu-category-clean-js.js"></script>
+
+<script id="v209-expense-summary-stabilizer-js" src="assets/js/065-v209-expense-summary-stabilizer-js.js"></script>
+
+<link id="v210-upload-feedback-guard-css" rel="stylesheet" href="assets/css/043-v210-upload-feedback-guard-css.css">
+<script id="v210-upload-feedback-guard-js" src="assets/js/066-v210-upload-feedback-guard-js.js"></script>
+
+<link id="v211-final-category-company-fix-css" rel="stylesheet" href="assets/css/044-v211-final-category-company-fix-css.css">
+<script id="v211-final-category-company-fix-js" src="assets/js/067-v211-final-category-company-fix-js.js"></script>
+
+<script id="v212-real-invoice-row-source-js" src="assets/js/068-v212-real-invoice-row-source-js.js"></script>
+
+<link id="v213-hard-navigation-fix-css" rel="stylesheet" href="assets/css/045-v213-hard-navigation-fix-css.css">
+<script id="v213-hard-navigation-fix-js" src="assets/js/069-v213-hard-navigation-fix-js.js"></script>
+
+<link id="v214-category-assignment-expense-move-css" rel="stylesheet" href="assets/css/046-v214-category-assignment-expense-move-css.css">
+<script id="v214-category-assignment-expense-move-js" src="assets/js/070-v214-category-assignment-expense-move-js.js"></script>
+
+<link id="v215-memory-source-manager-css" rel="stylesheet" href="assets/css/047-v215-memory-source-manager-css.css">
+<script id="v215-memory-source-manager-js" src="assets/js/071-v215-memory-source-manager-js.js"></script>
+
+<link id="v216-show-memory-delete-buttons-css" rel="stylesheet" href="assets/css/048-v216-show-memory-delete-buttons-css.css">
+<script id="v216-show-memory-delete-buttons-js" src="assets/js/072-v216-show-memory-delete-buttons-js.js"></script>
+
+<link id="v217-memory-menu-page-css" rel="stylesheet" href="assets/css/049-v217-memory-menu-page-css.css">
+<script id="v217-memory-menu-page-js" src="assets/js/073-v217-memory-menu-page-js.js"></script>
+
+
+
+
+<link id="v219-report-page-css" rel="stylesheet" href="assets/css/050-v219-report-page-css.css">
+
+
+<link id="v220-menu-unlock-css" rel="stylesheet" href="assets/css/051-v220-menu-unlock-css.css">
+<script id="v220-menu-unlock-js" src="assets/js/075-v220-menu-unlock-js.js?v=20260728_remove_invoice_report"></script>
+
+
+<script id="v221-invoice-open-layout-fix" src="assets/js/076-v221-invoice-open-layout-fix.js?v=20260728_remove_invoice_report"></script>
+
+<link id="v247-project-management-css" rel="stylesheet" href="assets/css/052-v247-project-management-css.css">
+<script id="v247-project-management-js" src="assets/js/077-v247-project-management-js.js"></script>
+
+<script id="v250-project-force-visible-js" src="assets/js/078-v250-project-force-visible-js.js"></script>
+
+<link id="v253-project-invoice-add-css" rel="stylesheet" href="assets/css/053-v253-project-invoice-add-css.css">
+<script id="v253-project-invoice-add-js" src="assets/js/079-v253-project-invoice-add-js.js"></script>
+
+<link id="v254-project-detail-sales-css" rel="stylesheet" href="assets/css/054-v254-project-detail-sales-css.css">
+<script id="v254-project-detail-sales-js" src="assets/js/080-v254-project-detail-sales-js.js"></script>
+
+<link id="v255-project-profit-vat-css" rel="stylesheet" href="assets/css/055-v255-project-profit-vat-css.css">
+<script id="v255-project-profit-vat-js" src="assets/js/081-v255-project-profit-vat-js.js"></script>`r`n</body></html>
+<!-- v257 XML append + duplicate guard for desktop file -->
+<script id="v257-xml-append-dedupe-desktop-js" src="assets/js/082-v257-xml-append-dedupe-desktop-js.js"></script>
+
+<!-- v258 XML append + duplicate guard clean final -->
+<script id="v258-xml-append-dedupe-clean-final-js" src="assets/js/083-v258-xml-append-dedupe-clean-final-js.js"></script>
+
+<!-- v270 category sorting + fresh company payment pages -->
+<link id="v270-company-category-css" rel="stylesheet" href="assets/css/056-v270-company-category-css.css">
+<script id="v270-company-category-js" src="assets/js/084-v270-company-category-js.js"></script>
+<!-- v271 data health + duplicate cleaner -->
+<link id="v271-data-health-css" rel="stylesheet" href="assets/css/058-v271-data-health-css.css">
+<script id="v271-data-health-js" src="assets/js/085-v271-data-health-js.js"></script>
+<!-- v272 BHD cleanup, category manager, deleted rows -->
+<link id="v272-bhd-cleanup-css" rel="stylesheet" href="assets/css/059-v272-bhd-cleanup-css.css">
+<script id="v272-bhd-cleanup-js" src="assets/js/086-v272-bhd-cleanup-js.js"></script>
+<!-- v273 BHD movement to firm payment bridge -->
+<link id="v273-bhd-payment-bridge-css" rel="stylesheet" href="assets/css/060-v273-bhd-payment-bridge-css.css">
+<script id="v273-bhd-payment-bridge-js" src="assets/js/087-v273-bhd-payment-bridge-js.js?v=20260728_unlink_delete_supabase"></script>
+<!-- v274 wide screen and PDF statement polish -->
+<link id="v274-wide-screen-pdf-css" rel="stylesheet" href="assets/css/061-v274-wide-screen-pdf-css.css">
+<!-- v278 BHD Halkbank wrong-parser guard and memory cleanup -->
+<script id="v278-bhd-halkbank-cleanup-js" src="assets/js/089-v278-bhd-halkbank-cleanup-js.js"></script>
+<!-- v276 BHD persistent memory manager -->
+<link id="v276-bhd-memory-css" rel="stylesheet" href="assets/css/064-v276-bhd-memory-css.css?v=20260728_bhd_supabase_delete">
+<script id="v276-bhd-memory-js" src="assets/js/090-v276-bhd-memory-js.js?v=20260727_bhd_overwrite_archive"></script>
+
+<script id="v279-removed-modules-stubs" src="assets/js/091-v279-removed-modules-stubs.js"></script>
+
+<!-- v284 remove old invoice company analysis button -->
+<link id="v285-hide-invoice-company-analysis-css" rel="stylesheet" href="assets/css/065-v285-hide-invoice-company-analysis-css.css">
+<script id="v284-remove-invoice-company-analysis-js" src="assets/js/092-v284-remove-invoice-company-analysis-js.js"></script>
+
+<!-- v286 standalone project management module -->
+<link id="v286-project-module-css" rel="stylesheet" href="assets/css/066-v286-project-module-css.css">
+<script id="v286-project-module-js" src="assets/js/093-v286-project-module-js.js"></script>
+
+<!-- v287 persistent logo uploader -->
+<link id="v287-logo-uploader-css" rel="stylesheet" href="assets/css/067-v287-logo-uploader-css.css">
+<script id="v287-logo-uploader-js" src="assets/js/094-v287-logo-uploader-js.js"></script>
+
+<!-- v288 live invoice line total refresh -->
+<script id="v288-live-categorize-totals-js" src="assets/js/095-v288-live-categorize-totals-js.js"></script>
+
+<!-- v289 invoice categorize expand + send lines to project -->
+<link id="v289-categorize-project-css" rel="stylesheet" href="assets/css/068-v289-categorize-project-css.css">
+<script id="v289-categorize-project-js" src="assets/js/096-v289-categorize-project-js.js"></script>
+
+<link id="v290-invoice-review-css" rel="stylesheet" href="assets/css/069-v290-invoice-review-css.css">
+<script id="v290-invoice-review-js" src="assets/js/097-v290-invoice-review-js.js"></script>
+
+<script id="v291-force-xml-summary-js" src="assets/js/098-v291-force-xml-summary-js.js"></script>
+<script id="omas-supabase-cari-cards-js" src="assets/js/0003-omas-supabase-cari-cards.js?v=20260728_payment_delete"></script>
+<script id="omas-supabase-bhd-payments-js" src="assets/js/0004-omas-supabase-bhd-payments.js?v=20260727_bhd_pay_fix"></script>
+<script id="omas-supabase-bhd-archive-js" src="assets/js/0005-omas-supabase-bhd-archive.js?v=20260728_bhd_supabase_delete"></script>
+<script id="omas-supabase-bhd-auto-sync-js" src="assets/js/0012-omas-supabase-bhd-auto-sync.js?v=20260728_bhd_auto_sync_state"></script>
+<script id="omas-supabase-app-state-sync-js" src="assets/js/0013-omas-supabase-app-state-sync.js?v=20260728_app_state_full_sync"></script>
+<script id="omas-supabase-bhd-state-sync-js" src="assets/js/0014-omas-supabase-bhd-state-sync.js?v=20260728_bhd_state_sync_group_delete"></script>
+<script id="omas-supabase-invoice-line-state-sync-js" src="assets/js/0015-omas-supabase-invoice-line-state-sync.js?v=20260728_invoice_line_recover_no_column_safe"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

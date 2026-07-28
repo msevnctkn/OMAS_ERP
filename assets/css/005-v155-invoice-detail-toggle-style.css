@@ -1,0 +1,26 @@
+.invoice-detail-toggle-panel{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin:26px 0 14px;
+  padding:14px 16px;
+  border:1px solid #e5e7eb;
+  border-radius:16px;
+  background:#f8fafc;
+}
+.invoice-detail-toggle-panel strong{font-size:16px;color:#111827}
+.invoice-detail-toggle-panel small{display:block;margin-top:3px;color:#64748b;line-height:1.35}
+.invoice-detail-toggle-buttons{display:flex;gap:8px;flex-wrap:wrap}
+.invoice-detail-toggle-buttons button{
+  border:1px solid #d1d5db;
+  background:#fff;
+  color:#374151;
+  border-radius:999px;
+  padding:10px 14px;
+  font-size:13px;
+  font-weight:800;
+  cursor:pointer;
+}
+.invoice-detail-toggle-buttons button.active{background:#111827;color:#fff;border-color:#111827}

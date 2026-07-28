@@ -1,0 +1,8 @@
+.invoice-category-manager{display:none;margin:10px 0 18px;padding:14px 16px;border:1px solid #dbe4ef;border-radius:16px;background:#fff}
+.invoice-category-manager.open{display:block}.invoice-category-manager-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.invoice-category-manager h4{margin:0 0 10px;color:#111827;font-size:16px}.invoice-category-manager label{display:block;font-size:11px;font-weight:800;color:#64748b;margin-bottom:5px}
+.invoice-category-manager input,.invoice-category-manager select{width:100%;border:1px solid #d1d5db;border-radius:10px;padding:9px 10px;font-size:13px;background:#fff}
+.invoice-category-manager-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:8px}.invoice-category-manager-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.invoice-category-manager-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.invoice-category-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid #e5e7eb;border-radius:999px;padding:6px 8px;background:#f8fafc;font-size:12px;font-weight:700;color:#334155}
+.invoice-category-pill button{border:none;border-radius:999px;background:#dc2626;color:#fff;width:20px;height:20px;line-height:18px;font-weight:800;cursor:pointer}
+@media(max-width:900px){.invoice-category-manager-grid{grid-template-columns:1fr}.invoice-category-manager-row{grid-template-columns:1fr}}

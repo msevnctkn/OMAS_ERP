@@ -1,0 +1,4 @@
+#v189PageAnalysis #expenseReceiptTable,
+#v189PageAnalysis #expenseReceiptTable.closest-placeholder{display:none!important;}
+#v204ExpenseSummaryPanel{border:1px solid #d9e0ea;border-radius:12px;background:#fff;padding:14px;margin:12px 0;box-shadow:0 6px 18px rgba(16,24,40,.05)}
+#v204ExpenseSummaryPanel h4{margin:0 0 10px;font-size:17px;color:#172033}#v204ExpenseSummaryPanel small{display:block;color:#667085;font-weight:700;margin-bottom:10px}

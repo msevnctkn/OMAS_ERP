@@ -1,0 +1,14 @@
+#v189CategoryContent #v205CompanyInvoicesPanel,
+#v189CategoryContent #v198CompanyAnalysisPanel,
+#v189CategoryContent #invoiceCompanyAnalysisPanel,
+#v189CategoryContent #v204ExpenseSummaryPanel,
+#v189CategoryContent #v198MovedExpenseWrap{display:none!important}
+#v189PageCompany #v205CompanyInvoicesPanel,
+#v189PageCompany #v208CompanyPagePanel{display:block!important}
+#v189PageAnalysis #expenseReceiptTable{display:table!important}
+#v189PageAnalysis #expenseReceiptTable thead{display:table-header-group!important}
+#v189PageAnalysis #expenseReceiptTable tbody{display:table-row-group!important}
+#v208CompanyPagePanel{border:1px solid #d7dee8;border-radius:10px;background:#fff;padding:16px;margin:14px 0;box-shadow:0 8px 22px rgba(16,24,40,.06)}
+#v208CompanyPagePanel h4{margin:0 0 8px;font-size:17px;color:#172033}#v208CompanyPagePanel small{display:block;color:#667085;font-weight:700;margin-bottom:12px}
+.v208-detail-row{display:none}.v208-detail-row.is-open{display:table-row}.v208-summary{cursor:pointer}.v208-summary:hover td{background:#f8fbff!important}.v208-arrow{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:1px solid #cfd8e3;border-radius:6px;margin-right:8px;font-weight:900;color:#344054}.v208-summary.is-open .v208-arrow{background:#172033;color:#fff;border-color:#172033}.v208-invoice-list{display:grid;gap:7px;padding:8px 0}.v208-invoice-line{display:grid;grid-template-columns:82px 105px minmax(120px,1fr) minmax(140px,1fr) 120px;gap:8px;align-items:center;padding:8px 10px;border:1px solid #e6ebf2;border-radius:8px;background:#fff;font-size:13px}.v208-chip{display:inline-flex;justify-content:center;border-radius:999px;background:#eef4ff;border:1px solid #c7d7fe;color:#173b7a;font-weight:800;font-size:12px;padding:4px 8px}.v208-muted{color:#667085;font-weight:700}.v208-amount{text-align:right;font-weight:900;color:#172033}.v208-percent{display:grid;grid-template-columns:minmax(52px,auto) minmax(80px,1fr);gap:8px;align-items:center}.v208-bar{height:8px;border-radius:99px;background:#edf1f6;overflow:hidden}.v208-bar i{display:block;height:100%;background:#2f6fed}.v208-empty{padding:14px;border:1px dashed #cfd8e3;border-radius:10px;background:#fbfcfe;color:#667085;font-weight:800}
+@media(max-width:900px){.v208-invoice-line{grid-template-columns:1fr}.v208-amount{text-align:left}}

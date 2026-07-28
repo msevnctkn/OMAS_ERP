@@ -1,0 +1,12 @@
+.invoice-category-selects{display:grid;grid-template-columns:1fr;gap:6px;min-width:170px}
+.invoice-category-selects select{width:100%;border:1px solid #d1d5db;border-radius:9px;padding:7px 9px;background:#fff;font-size:12px;font-weight:700}
+.invoice-category-panel{margin:24px 0;border:2px solid #111827;border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 8px 20px rgba(0,0,0,.07)}
+.invoice-category-head{background:#111827;color:#fff;padding:15px 18px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.invoice-category-head h3{margin:0;font-size:20px}.invoice-category-head small{display:block;color:#cbd5e1;margin-top:4px;font-size:12px}
+.invoice-category-body{padding:16px;background:#f8fafc}
+.invoice-category-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.invoice-category-kpi{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px}.invoice-category-kpi span{display:block;color:#64748b;font-size:12px;margin-bottom:6px}.invoice-category-kpi strong{font-size:19px;color:#111827}.invoice-category-kpi small{display:block;margin-top:6px;color:#64748b;line-height:1.35}
+.invoice-category-bars{display:flex;flex-direction:column;gap:9px;margin:12px 0}.invoice-category-bar-row{display:grid;grid-template-columns:190px 1fr 110px;gap:8px;align-items:center;font-size:12px}.invoice-category-bar-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#334155}.invoice-category-bar-wrap{height:12px;background:#e5e7eb;border-radius:999px;overflow:hidden}.invoice-category-bar-fill{height:12px;background:#f97316;border-radius:999px}.invoice-category-bar-val{text-align:right;font-weight:800;white-space:nowrap;color:#111827}
+.invoice-target-input{width:74px;border:1px solid #d1d5db;border-radius:8px;padding:6px 8px;font-size:12px;text-align:right}
+.invoice-category-note{padding:12px;background:#fff;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;font-size:13px;line-height:1.5;margin-top:12px}
+@media(max-width:1100px){.invoice-category-kpis{grid-template-columns:1fr}.invoice-category-bar-row{grid-template-columns:1fr}.invoice-category-bar-val{text-align:left}}

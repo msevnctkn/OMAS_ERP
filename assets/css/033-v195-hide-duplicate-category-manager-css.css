@@ -1,0 +1,3 @@
+#v191CategoryPanel > .v191-category-manager{display:none!important;}
+#v191CategoryPanel > #v192CategoryFlash{display:none!important;}
+#v194SolidCategoryManager + #v191CategoryPanel > .v191-category-manager{display:none!important;}

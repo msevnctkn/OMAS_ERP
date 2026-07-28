@@ -1,0 +1,11 @@
+body.v287-has-logo .header h1:before{display:none!important}
+  .v287-brand-logo{width:72px;height:52px;object-fit:contain;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:5px;box-shadow:0 6px 16px rgba(15,23,42,.10);flex:0 0 auto}
+  .header h1{justify-content:center}
+  .v287-logo-tools{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .v287-logo-tools input{display:none}
+  .v287-logo-btn{border:0;border-radius:10px;padding:9px 12px;background:#111827;color:#fff;font-weight:900;cursor:pointer}
+  .v287-logo-btn.primary{background:#2563eb}
+  .v287-logo-btn.danger{background:#b91c1c}
+  .module-title .v287-brand-logo{width:48px;height:36px;border-radius:8px;box-shadow:none;margin-right:8px}
+  .module-title h2{display:flex;align-items:center;gap:8px}
+  @media(max-width:760px){.v287-brand-logo{width:58px;height:42px}.module-title .v287-brand-logo{width:42px;height:32px}}

@@ -1,0 +1,3 @@
+#v189InvoiceSide [data-v189-page="category"],#v189InvoiceSide [data-v189-page="company"]{display:flex!important;visibility:visible!important;pointer-events:auto!important;opacity:1!important}
+#v189PageCategory.active,#v189PageCompany.active{display:block!important}
+#v189PageCategory:not(.active),#v189PageCompany:not(.active){display:none!important}

@@ -1,0 +1,47 @@
+﻿OMAS SUPABASE KURULUM SIRASI
+
+1. Supabase paneline gir:
+   https://supabase.com/dashboard/project/amggzlliowdapeplsjjg
+
+2. SQL Editor ac.
+
+3. Bu dosyanin tamamini kopyala ve calistir:
+   supabase/schema.sql
+
+3A. Mevcut kuruluma sonradan ekleme yapiyorsan bunu da bir kez calistir:
+   supabase/app_state.sql
+
+3B. BHD satir kategori/firma/silme durumunu DB'ye yazmak icin bunu da bir kez calistir:
+   supabase/bhd_state_columns.sql
+
+3C. Fatura kalemi kategori/firma/proje/silme durumunu DB'ye yazmak icin bunu da bir kez calistir:
+   supabase/invoice_line_state_columns.sql
+
+4. Authentication > Users bolumunden kendi kullanicini olustur.
+
+5. SQL Editor'de sirket kaydi ac:
+   insert into public.companies (name) values ('OMAS GRUP') returning id;
+
+6. Donen company id ile kendi auth user id'ni company_members tablosuna ekle:
+   insert into public.company_members (company_id, user_id, role)
+   values ('COMPANY_ID_BURAYA', 'AUTH_USER_ID_BURAYA', 'admin');
+
+7. Sonra frontend entegrasyonu baslayacak:
+   - Login ekrani
+   - XML fatura yukleme
+   - Duplicate kontrol
+   - Cari karta otomatik isleme
+
+Not:
+Publishable key frontend icin uygundur.
+Service role key kesinlikle frontend dosyalarina konulmaz.
+
+Frontend durumu:
+- Login ekrani eklendi.
+- Giris basarili olunca aktif sirket su degiskende hazir olur:
+  window.OMAS_AUTH.company.id
+- Supabase client su degiskende hazir olur:
+  window.omasSupabase
+
+Siradaki entegrasyon:
+- XML fatura okuma sonucunu public.faturalar ve public.fatura_kalemleri tablolarina yazmak.

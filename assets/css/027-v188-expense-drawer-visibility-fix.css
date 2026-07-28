@@ -1,0 +1,7 @@
+#invoiceAnalysisModule .v187-expense-pane.active .upload-area.v187-expense-source{display:block!important;}
+#invoiceAnalysisModule #v187ExpensePaneCategory.active #invoiceCategoryToolbar,
+#invoiceAnalysisModule #v187ExpensePaneCategory.active #invoiceCategoryAnalysisPanel,
+#invoiceAnalysisModule #v187ExpensePaneCategory.active #invoiceCategoryManager{display:block!important;}
+#invoiceAnalysisModule #v187ExpensePaneCategory:not(.active) #invoiceCategoryToolbar,
+#invoiceAnalysisModule #v187ExpensePaneCategory:not(.active) #invoiceCategoryAnalysisPanel,
+#invoiceAnalysisModule #v187ExpensePaneCategory:not(.active) #invoiceCategoryManager{display:none!important;}

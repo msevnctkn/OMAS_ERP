@@ -1,0 +1,4 @@
+#v189InvoiceSide,#v189InvoiceSide *{visibility:visible!important;pointer-events:auto!important;opacity:1!important}
+#v189InvoiceSide{display:block!important;z-index:50!important}
+#v189InvoiceSide [data-v189-page]{display:flex!important;align-items:center!important;justify-content:flex-start!important;cursor:pointer!important}
+#v189PageReport .v219-report-toolbar button,#v189PageMemory #v215MemoryPanel button{display:inline-flex!important;visibility:visible!important;pointer-events:auto!important;opacity:1!important}

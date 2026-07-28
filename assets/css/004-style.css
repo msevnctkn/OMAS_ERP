@@ -1,0 +1,55 @@
+.top-menu-bar{
+  position:sticky;
+  top:0;
+  z-index:9999;
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 18px;
+  background:#111827;
+  box-shadow:0 6px 18px rgba(0,0,0,.18);
+}
+.top-menu-title{
+  color:#fff;
+  font-size:18px;
+  font-weight:900;
+  margin-right:16px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:max-content;
+  letter-spacing:0;
+}
+.top-menu-logo{
+  width:46px;
+  height:34px;
+  object-fit:contain;
+  background:#fff;
+  border-radius:6px;
+  padding:3px;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);
+}
+.top-menu-brand-text{
+  white-space:nowrap;
+}
+.top-menu-btn{
+  border:none;
+  border-radius:12px;
+  padding:10px 16px;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  transition:.18s ease;
+  color:#fff;
+}
+.top-menu-btn:hover{
+  transform:translateY(-1px);
+}
+.top-menu-btn.quote{background:#2563eb;}
+.top-menu-btn.materials{background:#059669;}
+.top-menu-btn.customer{background:#7c3aed;}
+
+.quote-crm-button-wrap{
+  display:none !important;
+}

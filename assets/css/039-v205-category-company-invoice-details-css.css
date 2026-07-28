@@ -1,0 +1,6 @@
+#v205CategoryDetailsPanel,#v205CompanyInvoicesPanel{border:1px solid #d9e0ea;border-radius:12px;background:#fff;padding:14px;margin:12px 0;box-shadow:0 6px 18px rgba(16,24,40,.05)}
+#v205CategoryDetailsPanel h4,#v205CompanyInvoicesPanel h4{margin:0 0 10px;font-size:17px;color:#172033}
+#v205CategoryDetailsPanel small,#v205CompanyInvoicesPanel small{display:block;color:#667085;font-weight:700;margin-bottom:10px}
+.v205-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}.v205-kpi{border:1px solid #d9e0ea;border-radius:9px;background:#fbfcfe;padding:12px}.v205-kpi span{display:block;font-size:12px;font-weight:800;color:#667085;margin-bottom:5px}.v205-kpi strong{font-size:18px;color:#172033}
+.v205-detail-row td{background:#fbfcfe!important}.v205-chip{display:inline-block;border:1px solid #d9e0ea;border-radius:999px;padding:4px 8px;background:#f8fafc;font-size:12px;font-weight:800;color:#344054}
+@media(max-width:900px){.v205-kpis{grid-template-columns:1fr}}

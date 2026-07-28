@@ -1,0 +1,147 @@
+body.omas-auth-locked {
+  overflow: hidden;
+}
+
+.omas-auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.94));
+  color: #172033;
+}
+
+body.omas-auth-locked .omas-auth-overlay {
+  display: flex;
+}
+
+.omas-auth-card {
+  width: min(420px, 100%);
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.omas-auth-head {
+  padding: 20px 22px 14px;
+  border-bottom: 1px solid #e8edf3;
+}
+
+.omas-auth-head h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.omas-auth-head p {
+  margin: 6px 0 0;
+  color: #667085;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.omas-auth-body {
+  padding: 18px 22px 22px;
+  display: grid;
+  gap: 12px;
+}
+
+.omas-auth-field label {
+  display: block;
+  margin-bottom: 5px;
+  color: #475467;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.omas-auth-field input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  padding: 11px 12px;
+  font-weight: 800;
+  outline: none;
+}
+
+.omas-auth-field input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.omas-auth-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.omas-auth-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-weight: 900;
+  cursor: pointer;
+  background: #2563eb;
+  color: #fff;
+}
+
+.omas-auth-btn.secondary {
+  background: #0f172a;
+}
+
+.omas-auth-btn:disabled {
+  opacity: 0.62;
+  cursor: wait;
+}
+
+.omas-auth-message {
+  min-height: 20px;
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.omas-auth-message.ok {
+  color: #166534;
+}
+
+.omas-auth-badge {
+  position: fixed;
+  right: 18px;
+  top: 88px;
+  z-index: 999999;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d8e0ea;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+  padding: 7px 8px 7px 12px;
+  color: #172033;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+body.omas-auth-ready .omas-auth-badge {
+  display: flex;
+}
+
+.omas-auth-badge button {
+  border: 0;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #fff;
+  padding: 6px 9px;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}

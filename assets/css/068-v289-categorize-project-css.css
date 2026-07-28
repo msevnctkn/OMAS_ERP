@@ -1,0 +1,13 @@
+#invoiceAnalysisModule.v289-side-collapsed #v189InvoiceShell{grid-template-columns:46px minmax(0,1fr)!important}
+  #invoiceAnalysisModule.v289-side-collapsed #v189InvoiceSide{width:46px!important;min-width:46px!important;max-width:46px!important;padding-left:6px!important;padding-right:6px!important;overflow:hidden!important}
+  #invoiceAnalysisModule.v289-side-collapsed #v189InvoiceSide [data-v189-page]{font-size:0!important;justify-content:center!important;padding-left:0!important;padding-right:0!important}
+  #invoiceAnalysisModule.v289-side-collapsed #v189InvoiceSide [data-v189-page]::first-letter{font-size:14px!important}
+  .v289-side-toggle{width:100%;border:0;border-radius:9px;background:#16a34a;color:#fff;font-weight:900;padding:9px 6px;margin:0 0 8px 0;cursor:pointer}
+  .v289-project-send{background:#16a34a!important;color:#fff!important;border-color:#16a34a!important}
+  .v289-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px}
+  .v289-modal{width:min(760px,96vw);background:#fff;border-radius:14px;box-shadow:0 24px 70px rgba(15,23,42,.28);padding:18px;border:1px solid #dbe3f0}
+  .v289-modal h3{margin:0 0 6px;color:#172033}.v289-modal small{color:#64748b;font-weight:800}
+  .v289-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.v289-field{display:grid;gap:5px}.v289-field.full{grid-column:1/-1}
+  .v289-field label{font-size:12px;font-weight:900;color:#475569}.v289-field input,.v289-field select,.v289-field textarea{border:1px solid #cbd5e1;border-radius:9px;padding:10px;font-weight:800;width:100%}
+  .v289-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-wrap:wrap}.v289-actions button{border:0;border-radius:9px;padding:10px 13px;font-weight:900;cursor:pointer;background:#111827;color:#fff}.v289-actions .primary{background:#16a34a}.v289-note{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;color:#166534;margin-top:10px;font-weight:800}
+  @media(max-width:760px){.v289-grid{grid-template-columns:1fr}}

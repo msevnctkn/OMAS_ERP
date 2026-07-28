@@ -1,0 +1,8 @@
+#v189PageAnalysis button:not([onclick="analyzeInvoiceProfit()"]){display:none!important;}
+#v189PageAnalysis .invoice-a4-report-actions,
+#v189PageAnalysis .invoice-detail-toggle-buttons,
+#v189PageAnalysis #v187SpecialTabs{display:none!important;}
+#v189PageAnalysis .invoice-detail-toggle-panel{display:none!important;}
+#v189PageExpenses .upload-area > small{display:none!important;}
+#v189PageExpenses .upload-area{padding:16px!important;}
+#v189PageExpenses .upload-area > strong{font-size:16px!important;}

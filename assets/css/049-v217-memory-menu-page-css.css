@@ -1,0 +1,9 @@
+#v189InvoiceSide [data-v189-page="memory"]{display:flex!important;visibility:visible!important;pointer-events:auto!important;opacity:1!important}
+#v189PageMemory.active{display:block!important;min-height:280px}
+#v189PageMemory:not(.active){display:none!important}
+#v189PageAnalysis #v215MemoryPanel{display:none!important}
+#v189PageMemory #v215MemoryPanel{display:block!important}
+#v189PageMemory #v215MemoryPanel button,
+#v189PageMemory #v215RefreshMemory,
+#v189PageMemory #v215DeleteSelected,
+#v189PageMemory #v215MemoryPanel [data-v215-delete]{display:inline-flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
