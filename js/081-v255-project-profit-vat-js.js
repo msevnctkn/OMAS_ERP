@@ -1,0 +1,32 @@
+(function(){
+  var COST_ROWS='v233XmlInvoiceLines', COST_MAP='v248ProjectLineAssignments', SALES_ROWS='v254ProjectSalesLines', SALES_MAP='v254ProjectSalesAssignments', MANUAL='v254ProjectManualSales';
+  function q(s,r){return (r||document).querySelector(s);} function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
+  function read(k,fb){try{var v=JSON.parse(localStorage.getItem(k)||JSON.stringify(fb));return v==null?fb:v;}catch(e){return fb;}}
+  function money(v){try{return new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(v||0));}catch(e){return String(v||0);}}
+  function rowsFor(rowsKey,mapKey,pid){var rows=read(rowsKey,[]),map=read(mapKey,{});return rows.filter(function(r){return map[r.id]===pid;});}
+  function sum(lines){return lines.reduce(function(a,r){a.count++;a.matrah+=Number(r.matrah||0);a.kdv+=Number(r.kdv||0);a.total+=Number(r.total||0);return a;},{count:0,matrah:0,kdv:0,total:0});}
+  function costStats(pid){return sum(rowsFor(COST_ROWS,COST_MAP,pid));}
+  function salesStats(pid){var st=sum(rowsFor(SALES_ROWS,SALES_MAP,pid)),m=read(MANUAL,{}),x=m[pid];if(x&&(x.matrah||x.total)){var matrah=Number(x.matrah||0),total=Number(x.total||0),kdv=Math.max(0,total-matrah);st.count++;st.matrah+=matrah;st.kdv+=kdv;st.total+=total;}return st;}
+  function cls(v){return Number(v||0)>=0?'v255-positive':'v255-negative';}
+  function ensureAfter(ref,attr,html,klass){if(!ref||!ref.parentNode)return null;var row=ref.parentNode,el=q('['+attr+']',row);if(!el){el=document.createElement(ref.tagName);el.className=klass||ref.className;el.setAttribute(attr,'1');ref.parentNode.insertBefore(el,ref.nextSibling);}el.innerHTML=html;return el;}
+  function enhance(){
+    var page=q('#v189PageProject'),table=q('.v247-table',page);if(!page||!table||!table.tHead)return;
+    var head=table.tHead.rows[0];if(!head)return;
+    var salesHead=q('[data-v254-sales-head]',head);if(salesHead)salesHead.innerHTML='Satış Fiyatı<br><small>Satış Matrah | KDV | KDV Dahil</small>';
+    var vatHead=q('[data-v255-payable-head]',head);if(!vatHead&&salesHead){vatHead=document.createElement('th');vatHead.setAttribute('data-v255-payable-head','1');vatHead.innerHTML='Ödenecek KDV<br><small>Satış KDV - Alış KDV</small>';salesHead.parentNode.insertBefore(vatHead,salesHead.nextSibling);} 
+    var profitHead=q('[data-v255-profit-head]',head);if(!profitHead){var after=q('[data-v255-payable-head]',head)||salesHead;if(after){profitHead=document.createElement('th');profitHead.setAttribute('data-v255-profit-head','1');profitHead.innerHTML='Kar<br><small>Satış Matrah - Alış Matrah</small>';after.parentNode.insertBefore(profitHead,after.nextSibling);}}
+    var totals={costMatrah:0,costKdv:0,costTotal:0,salesMatrah:0,salesKdv:0,salesTotal:0,payable:0,profit:0,salesCount:0};
+    qa('[data-v254-project-row]',table).forEach(function(tr){var pid=tr.getAttribute('data-v254-project-row'),cost=costStats(pid),sales=salesStats(pid),payable=sales.kdv-cost.kdv,profit=sales.matrah-cost.matrah;
+      totals.costMatrah+=cost.matrah;totals.costKdv+=cost.kdv;totals.costTotal+=cost.total;totals.salesMatrah+=sales.matrah;totals.salesKdv+=sales.kdv;totals.salesTotal+=sales.total;totals.payable+=payable;totals.profit+=profit;totals.salesCount+=sales.count;
+      var salesCell=q('[data-v254-sales-cell]',tr);if(salesCell){salesCell.innerHTML='<strong>'+money(sales.matrah)+' TL | '+money(sales.kdv)+' TL | '+money(sales.total)+' TL</strong><br><small>'+sales.count+' satış kalemi</small>';}
+      var vatCell=ensureAfter(salesCell,'data-v255-payable-cell','<strong class="'+cls(payable)+'">'+money(payable)+' TL</strong>','amount v255-vat-cell');
+      ensureAfter(vatCell||salesCell,'data-v255-profit-cell','<strong class="'+cls(profit)+'">'+money(profit)+' TL</strong>','amount v255-profit-cell');
+    });
+    qa('.v254-project-detail',table).forEach(function(tr){var td=q('td',tr);if(td)td.colSpan=head.children.length;var pid=tr.getAttribute('data-v254-detail'),cost=costStats(pid),sales=salesStats(pid),payable=sales.kdv-cost.kdv,profit=sales.matrah-cost.matrah,box=q('.v254-detail-box',tr);if(box&&!q('[data-v255-detail-summary]',box)){var strip=document.createElement('div');strip.className='v255-summary-strip';strip.setAttribute('data-v255-detail-summary','1');strip.innerHTML='<div class="v255-summary-card"><span>Satış</span><strong>'+money(sales.matrah)+' TL | '+money(sales.kdv)+' TL | '+money(sales.total)+' TL</strong></div><div class="v255-summary-card"><span>Maliyet</span><strong>'+money(cost.matrah)+' TL | '+money(cost.kdv)+' TL | '+money(cost.total)+' TL</strong></div><div class="v255-summary-card"><span>Ödenecek KDV</span><strong class="'+cls(payable)+'">'+money(payable)+' TL</strong></div><div class="v255-summary-card"><span>Kar</span><strong class="'+cls(profit)+'">'+money(profit)+' TL</strong></div>';var grid=q('.v254-detail-grid',box);box.insertBefore(strip,grid||box.firstChild);}}
+    );
+    var salesKpi=q('[data-v254-sales-kpi]',page);if(salesKpi)salesKpi.innerHTML='<span>Satış Fiyatı</span><strong>'+money(totals.salesMatrah)+' TL | '+money(totals.salesKdv)+' TL | '+money(totals.salesTotal)+' TL</strong><small>'+totals.salesCount+' satış kalemi</small>';
+    var kpis=q('.v247-kpis',page);if(kpis){var payableKpi=q('[data-v255-payable-kpi]',kpis);if(!payableKpi){payableKpi=document.createElement('div');payableKpi.className='v247-kpi';payableKpi.setAttribute('data-v255-payable-kpi','1');kpis.appendChild(payableKpi);}payableKpi.innerHTML='<span>Ödenecek KDV</span><strong class="'+cls(totals.payable)+'">'+money(totals.payable)+' TL</strong><small>Satış KDV - Alış KDV</small>';var profitKpi=q('[data-v255-profit-kpi]',kpis);if(!profitKpi){profitKpi=document.createElement('div');profitKpi.className='v247-kpi';profitKpi.setAttribute('data-v255-profit-kpi','1');kpis.appendChild(profitKpi);}profitKpi.innerHTML='<span>Kar</span><strong class="'+cls(totals.profit)+'">'+money(totals.profit)+' TL</strong><small>Satış matrah - alış matrah</small>';}
+  }
+  var old=window.v247RenderProjects;window.v247RenderProjects=function(){var r=old&&old.apply(this,arguments);setTimeout(enhance,60);setTimeout(enhance,420);return r;};
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(enhance,1000);});setInterval(function(){var p=q('#v189PageProject');if(p&&p.classList.contains('active'))enhance();},1000);
+})();
