@@ -10,17 +10,17 @@
         if (row.uuid) {
 
             const uuidResult = await client
-                .from("faturalar")
-                .select("id")
-                .eq("company_id", companyId)
-                .eq("uuid", String(row.uuid))
-                .maybeSingle();
+            .from("faturalar")
+            .select("id")
+            .eq("company_id", companyId)
+            .eq("uuid", String(row.uuid))
+            .limit(1);
 
-            if (uuidResult.error)
-                throw uuidResult.error;
+        if (uuidResult.error)
+            throw uuidResult.error;
 
-            if (uuidResult.data)
-                return uuidResult.data;
+        if (uuidResult.data && uuidResult.data.length)
+            return uuidResult.data[0];
         }
 
         const invoiceResult = await client
@@ -28,16 +28,18 @@
             .select("id")
             .eq("company_id", companyId)
             .eq("direction", "alis")
-            .eq("invoice_no", String(row.invoiceNo || ""))
-            .eq("supplier_name", String(row.supplier || ""))
+            .eq("invoice_no", String(row.invoiceNo || "").trim())
             .eq("issue_date", issueDate)
             .eq("total", total)
-            .maybeSingle();
+            .limit(1);
 
         if (invoiceResult.error)
             throw invoiceResult.error;
 
-        return invoiceResult.data || null;
+        if (invoiceResult.data && invoiceResult.data.length)
+            return invoiceResult.data[0];
+
+        return null;
     }
 
     async function ensureInvoice(client, companyId, cariId, group, helpers) {
@@ -63,7 +65,7 @@
                 company_id: companyId,
                 cari_id: cariId,
                 direction: "alis",
-                invoice_no: row.invoiceNo,
+                invoice_no: String(row.invoiceNo || "").trim(),
                 uuid: row.uuid || null,
                 issue_date: helpers.dateOrNull(row.date),
                 supplier_name: row.supplier,
