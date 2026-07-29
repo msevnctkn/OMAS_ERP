@@ -1,0 +1,22 @@
+ÖMAS ERP - Admin Bakım Paneli V1
+
+1) Bu paketi mevcut proje klasörünün üzerine kopyalayın.
+2) Supabase > SQL Editor içinde şu dosyayı bir kez çalıştırın:
+   supabase/admin_maintenance_v1.sql
+3) Uygulamayı Ctrl+F5 ile yenileyin.
+4) Admin kullanıcıyla giriş yapınca sol altta "Admin · Bakım" butonu görünür.
+
+Panel seçenekleri:
+- Faturaları Sil: faturalar + fatura_kalemleri
+- BHD / Ödeme Sil: banka_hareketleri + odemeler
+- Tümünü Sil: operasyonel şirket verileri; şirket ve kullanıcı üyelikleri korunur.
+
+Güvenlik:
+- Yalnız admin rolü çalıştırabilir.
+- İşlem öncesi doğrulama cümlesi ve ikinci onay gerekir.
+- Silme işlemleri veritabanında tek transaction içinde çalışır.
+- Sonuç audit_log tablosuna yazılır.
+
+Not:
+- "Tümünü Sil" dosyalar tablosundaki metadata kayıtlarını siler.
+- Supabase Storage içindeki fiziksel dosyaları bu sürüm otomatik silmez.
