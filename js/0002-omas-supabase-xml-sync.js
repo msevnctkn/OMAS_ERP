@@ -173,33 +173,46 @@
   }
 
   async function findExistingInvoice(client, companyId, group) {
+
     var row = group.first;
     var issueDate = dateOrNull(row.date);
     var total = round2(group.total);
 
-    var query = client
-      .from('faturalar')
-      .select('id')
-      .eq('company_id', companyId)
-      .eq('direction', 'alis')
-      .eq('invoice_no', String(row.invoiceNo || ''))
-      .eq('total', total)
-      .limit(1);
-
+    // 1- Önce UUID ile ara
     if (row.uuid) {
-      query = query.eq('uuid', String(row.uuid));
-    } else if (issueDate) {
-      query = query.eq('issue_date', issueDate);
+
+        var uuidResult = await client
+            .from("faturalar")
+            .select("id")
+            .eq("company_id", companyId)
+            .eq("uuid", String(row.uuid))
+            .maybeSingle();
+
+        if (uuidResult.error)
+            throw uuidResult.error;
+
+        if (uuidResult.data)
+            return uuidResult.data;
     }
 
-    var result = await query.maybeSingle();
+    // 2- UUID bulunamadıysa aynı faturayı diğer bilgilerle ara
+    var invoiceResult = await client
+        .from("faturalar")
+        .select("id")
+        .eq("company_id", companyId)
+        .eq("direction", "alis")
+        .eq("invoice_no", String(row.invoiceNo || ""))
+        .eq("supplier_name", String(row.supplier || ""))
+        .eq("total", total)
+        .eq("issue_date", issueDate)
+        .maybeSingle();
 
-    if (result.error) {
-      throw result.error;
-    }
+    if (invoiceResult.error)
+        throw invoiceResult.error;
 
-    return result.data || null;
-  }
+    return invoiceResult.data || null;
+}
+
 
   async function ensureInvoice(client, companyId, cariId, group) {
     var row = group.first;
