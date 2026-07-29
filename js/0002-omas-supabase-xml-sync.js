@@ -172,115 +172,7 @@
     return result.data;
   }
 
-  async function findExistingInvoice(client, companyId, group) {
 
-    var row = group.first;
-    var issueDate = dateOrNull(row.date);
-    var total = round2(group.total);
-
-    // 1- Önce UUID ile ara
-    if (row.uuid) {
-
-        var uuidResult = await client
-            .from("faturalar")
-            .select("id")
-            .eq("company_id", companyId)
-            .eq("uuid", String(row.uuid))
-            .maybeSingle();
-
-        if (uuidResult.error)
-            throw uuidResult.error;
-
-        if (uuidResult.data)
-            return uuidResult.data;
-    }
-
-    // 2- UUID bulunamadıysa aynı faturayı diğer bilgilerle ara
-    var invoiceResult = await client
-        .from("faturalar")
-        .select("id")
-        .eq("company_id", companyId)
-        .eq("direction", "alis")
-        .eq("invoice_no", String(row.invoiceNo || ""))
-        .eq("supplier_name", String(row.supplier || ""))
-        .eq("total", total)
-        .eq("issue_date", issueDate)
-        .maybeSingle();
-
-    if (invoiceResult.error)
-        throw invoiceResult.error;
-
-    return invoiceResult.data || null;
-}
-
-
-  async function ensureInvoice(client, companyId, cariId, group) {
-    var row = group.first;
-    var issueDate = dateOrNull(row.date);
-    var total = round2(group.total);
-
-    var existingInvoice = await findExistingInvoice(
-      client,
-      companyId,
-      group
-    );
-
-    if (existingInvoice && existingInvoice.id) {
-      return {
-        id: existingInvoice.id,
-        existed: true
-      };
-    }
-
-    var insertResult = await client
-      .from('faturalar')
-      .insert({
-        company_id: companyId,
-        cari_id: cariId,
-        direction: 'alis',
-        invoice_no: String(row.invoiceNo || ''),
-        uuid: row.uuid ? String(row.uuid) : null,
-        issue_date: issueDate,
-        supplier_name: String(row.supplier || ''),
-        currency: String(row.currency || 'TRY').toUpperCase(),
-        exchange_rate: n(row.exchangeRate) || 1,
-        matrah: round2(group.matrah),
-        kdv: round2(group.kdv),
-        total: total,
-        xml_hash: group.key
-      })
-      .select('id')
-      .single();
-
-    if (insertResult.error) {
-      /*
-       * İki farklı bilgisayar aynı faturayı aynı anda yüklerse,
-       * UNIQUE index ikinci eklemeyi 23505 koduyla reddeder.
-       * Bu durumda mevcut faturayı bulup normal biçimde devam ediyoruz.
-       */
-      if (isDuplicateError(insertResult.error)) {
-        var duplicateInvoice = await findExistingInvoice(
-          client,
-          companyId,
-          group
-        );
-
-        if (duplicateInvoice && duplicateInvoice.id) {
-          return {
-            id: duplicateInvoice.id,
-            existed: true
-          };
-        }
-      }
-
-      throw insertResult.error;
-    }
-
-    return {
-      id: insertResult.data.id,
-      existed: false
-    };
-  }
 
   function buildLinePayload(companyId, invoiceId, cariId, rows) {
     return rows.map(function (row) {
@@ -466,11 +358,17 @@
 
         stats.cariler++;
 
-        var invoiceResult = await ensureInvoice(
-          auth.client,
-          auth.companyId,
-          cari.id,
-          group
+        var invoiceResult =
+        await window.OMASInvoiceService.ensureInvoice(
+        auth.client,
+        auth.companyId,
+        cari.id,
+        group,
+        {
+            n,
+            round2,
+            dateOrNull
+        }
         );
 
         if (invoiceResult.existed) {
