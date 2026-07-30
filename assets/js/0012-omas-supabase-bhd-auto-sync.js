@@ -214,6 +214,7 @@
   }
 
   window.omasSyncBhdRowsToSupabase = syncRows;
+  /*
   window.addEventListener('omas:auth-ready', function () { setTimeout(function () { schedule('auth-ready'); }, 1200); });
   document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { schedule('dom-ready'); }, 1800); });
   setTimeout(function () { schedule('late-load'); }, 2500);
@@ -221,4 +222,12 @@
     var btn = ev.target && ev.target.closest && ev.target.closest('#bhdV267Read');
     if (btn) setTimeout(function () { schedule('read-click'); }, 1800);
   }, true);
+  */
+
+  OMAS.Services = OMAS.Services || {};
+  OMAS.Services.BHD = OMAS.Services.BHD || {};
+
+  OMAS.Services.BHD.saveToDatabase = function () {
+      return syncRows('manual');
+  };
 })();
