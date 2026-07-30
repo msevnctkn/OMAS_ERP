@@ -309,6 +309,12 @@
       row.sira = idx + 1;
       window.bhdRawRows.push(row);
     });
+    if (window.OMAS &&
+    OMAS.Workspace &&
+    typeof OMAS.Workspace.setBhdDraftRows === 'function') {
+
+    OMAS.Workspace.setBhdDraftRows(window.bhdRawRows);
+}
     write(ROWS_KEY, allRows);
     var doneText = 'Is Bankasi KK dogrudan okundu. PDF satiri: ' + allRows.length + '. Ilk satir: PDF 001. Son satir: PDF ' + String(allRows.length).padStart(3, '0') + '.' + archiveNote;
     if (statusEl) statusEl.textContent = doneText;

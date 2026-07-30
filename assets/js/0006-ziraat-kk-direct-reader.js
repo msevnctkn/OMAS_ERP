@@ -260,6 +260,12 @@
       row.sira = idx + 1;
       window.bhdRawRows.push(row);
     });
+    if (window.OMAS &&
+    OMAS.Workspace &&
+    typeof OMAS.Workspace.setBhdDraftRows === 'function') {
+
+    OMAS.Workspace.setBhdDraftRows(window.bhdRawRows);
+}
     write(ROWS_KEY, allRows);
     if (statusEl) statusEl.textContent = 'Ziraat KK dogrudan okundu. Eklenen hareket: ' + allRows.length + '.' + archiveNote;
     rerender();
