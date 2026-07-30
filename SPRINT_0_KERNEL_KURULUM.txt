@@ -1,0 +1,27 @@
+OMAS ERP - SPRINT 0 / KERNEL
+
+Bu sürüm yalnızca çekirdek OMAS namespace'ini ekler.
+Mevcut BHD, kategori raporu, parser, auto-sync veya runtime davranışını değiştirmez.
+
+Eklenen dosya:
+- assets/js/core/000-omas-kernel.js
+
+Değişen dosya:
+- index.html (Supabase scriptinden hemen sonra kernel scripti eklendi)
+
+Test:
+1. Ctrl+F5
+2. Console:
+   typeof window.OMAS
+   window.OMAS.version
+   window.OMAS.Runtime.getBhdRows()
+   window.OMAS.Workspace.getBhdDraftRows()
+
+Beklenen:
+- object
+- 0.1.0
+- []
+- []
+
+Commit önerisi:
+feat(core): add OMAS application kernel
