@@ -216,9 +216,6 @@
     write(ROWS_KEY, allRows);
     showStatus('Ziraat hesap hareketleri dogrudan okundu. Eklenen hareket: ' + allRows.length + '.' + archiveNote);
     rerender();
-    window.dispatchEvent(new CustomEvent('omas:bhd-rows-loaded', {
-      detail: { rows: allRows.slice(), source: '0008-ziraat-account-direct-reader' }
-    }));
     if (readBtn) readBtn.disabled = false;
   }
   document.addEventListener('click', function (ev) {
