@@ -1,4 +1,6 @@
 (function () {
+  'use strict';
+
   var BHD_ROWS = 'bhdPersistentRowsV267';
   var syncing = false;
   var queued = false;
@@ -9,6 +11,11 @@
     return { client: window.omasSupabase, companyId: window.OMAS_AUTH.company.id };
   }
 
+  function service() {
+    if (!window.OMASBhdService) throw new Error('OMAS BHD servisi yüklenmedi.');
+    return window.OMASBhdService;
+  }
+
   function readRows() {
     try {
       var live = window.bhdRawRows && Array.isArray(window.bhdRawRows) ? window.bhdRawRows : [];
@@ -17,86 +24,6 @@
     } catch (err) {
       return [];
     }
-  }
-
-  function norm(value) {
-    return String(value || '')
-      .toLocaleUpperCase('tr-TR')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^A-Z0-9]+/g, ' ')
-      .trim();
-  }
-
-  function n(value) {
-    var num = Number(value || 0);
-    return isFinite(num) ? num : 0;
-  }
-
-  function isoDate(value) {
-    var s = String(value || '').trim();
-    var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (iso) return iso[1] + '-' + iso[2] + '-' + iso[3];
-    var tr = s.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);
-    if (!tr) return null;
-    var y = Number(tr[3]);
-    if (y < 100) y += 2000;
-    return String(y).padStart(4, '0') + '-' + String(tr[2]).padStart(2, '0') + '-' + String(tr[1]).padStart(2, '0');
-  }
-
-  function sourceName(row) {
-    return row && (row.bhdUploadName || row.bhdOriginalName || row.kaynak || row.banka || row.dosyaTipi) || 'BHD';
-  }
-
-  function movementAmount(row) {
-    var incoming = n(row && row.gelen);
-    var outgoing = n(row && row.giden);
-    var net = n(row && row.net);
-    if (!incoming && !outgoing && net) {
-      if (net > 0) incoming = net;
-      if (net < 0) outgoing = Math.abs(net);
-    }
-    return { incoming: incoming, outgoing: outgoing };
-  }
-
-  function dedupeKey(row, idx) {
-    var amount = movementAmount(row);
-    return [
-      'BHD',
-      norm(row && (row.banka || row.dosyaTipi || row.kaynak)),
-      String(row && (row.sira || idx + 1)),
-      isoDate(row && (row.tarih || row.islemTarihi)) || '',
-      Number(amount.incoming || 0).toFixed(2),
-      Number(amount.outgoing || 0).toFixed(2),
-      norm(row && (row.aciklama || row.islemAciklamasi || row.kisiFirma)),
-      norm(row && (row.fisNo || row.borcAlacak || '')).slice(0, 80)
-    ].join('|');
-  }
-
-  function payload(row, idx, companyId) {
-    var amount = movementAmount(row);
-    var date = isoDate(row && (row.tarih || row.islemTarihi));
-    if (!date || (!amount.incoming && !amount.outgoing)) return null;
-    var desc = String(row && (row.aciklama || row.islemAciklamasi || row.kisiFirma || sourceName(row)) || '').trim();
-    var key = dedupeKey(row, idx);
-    row.supabaseDedupeKey = key;
-    return {
-      company_id: companyId,
-      cari_id: row && row.supabaseCariId || null,
-      bank_name: row && (row.banka || row.bankName || '') || '',
-      account_name: row && (row.hesap || row.accountName || row.dosyaTipi || '') || '',
-      transaction_date: date,
-      description: desc,
-      party_name: row && (row.kisiFirma || row.islemAciklamasi || '') || '',
-      incoming: amount.incoming,
-      outgoing: amount.outgoing,
-      balance: row && row.bakiye !== '' && row.bakiye != null ? n(row.bakiye) : null,
-      company_code: row && (row.sirket || row.firma || row.companyCode || '') || null,
-      category_main: row && (row.kategori || row.categoryMain || '') || null,
-      category_sub: row && (row.altKategori || row.categorySub || '') || null,
-      is_deleted: false,
-      dedupe_key: key
-    };
   }
 
   function showStatus(text, ok) {
@@ -113,83 +40,88 @@
     box.style.background = ok === false ? '#fee2e2' : '#ecfdf5';
     box.style.borderColor = ok === false ? '#fecaca' : '#86efac';
     box.style.color = ok === false ? '#991b1b' : '#166534';
-    var st = document.querySelector('#bhdV267Status');
-    if (st && /Supabase BHD/.test(text)) st.textContent = text;
   }
-  function legacyPayload(body) {
-    var copy = {};
-    Object.keys(body || {}).forEach(function (key) {
-      if (key !== 'company_code' && key !== 'category_main' && key !== 'category_sub' && key !== 'is_deleted') copy[key] = body[key];
-    });
-    return copy;
+
+  function signature(rows) {
+    var svc = service();
+    return rows.length + ':' + rows.map(function (row, index) { return svc.dedupeKey(row, index); }).join('~').slice(0, 8000);
   }
-  async function insertMovement(client, body) {
-    var inserted = await client
-      .from('banka_hareketleri')
-      .insert(body)
-      .select('id')
-      .single();
-    if (!inserted.error) return inserted;
-    var msg = inserted.error && inserted.error.message ? inserted.error.message : '';
-    if (/company_code|category_main|category_sub|is_deleted|column/i.test(msg)) {
-      inserted = await client
-        .from('banka_hareketleri')
-        .insert(legacyPayload(body))
-        .select('id')
-        .single();
-    }
-    return inserted;
+
+  async function countRows(client, companyId) {
+    var result = await client.from('banka_hareketleri').select('id', { count: 'exact', head: true }).eq('company_id', companyId);
+    if (result.error) throw result.error;
+    return result.count || 0;
   }
 
   async function syncRows(reason) {
     var a = auth();
-    if (!a) return { saved: 0, skipped: 0 };
+    if (!a) return { toplam: 0, yeni: 0, atlanan: 0, hatali: 0 };
     if (syncing) {
       queued = true;
-      return { saved: 0, skipped: 0, queued: true };
+      return { toplam: 0, yeni: 0, atlanan: 0, hatali: 0, queued: true };
     }
+
     syncing = true;
     queued = false;
+    var startedAt = Date.now();
+
     try {
-      var rows = readRows().filter(function (row) { return row && !row.supabaseBankMovementId; });
-      var sig = rows.length + ':' + rows.map(function (r, i) { return dedupeKey(r, i); }).join('~').slice(0, 4000);
-      if (!rows.length || sig === lastSig) return { saved: 0, skipped: rows.length };
+      var svc = service();
+      var allRows = readRows();
+      var sig = signature(allRows);
+      if (!allRows.length) return { toplam: 0, yeni: 0, atlanan: 0, hatali: 0 };
+      if (sig === lastSig && reason !== 'manual') return { toplam: allRows.length, yeni: 0, atlanan: allRows.length, hatali: 0, unchanged: true };
       lastSig = sig;
-      var saved = 0, skipped = 0, errors = [];
-      showStatus('Supabase BHD kaydi basladi: ' + rows.length + ' hareket...', true);
-      for (var i = 0; i < rows.length; i++) {
-        var body = payload(rows[i], i, a.companyId);
-        if (!body) { skipped++; continue; }
+
+      var stats = { toplam: allRows.length, yeni: 0, atlanan: 0, hatali: 0, hatalar: [], sureMs: 0, veritabaniToplami: 0 };
+      showStatus('Supabase BHD aktarımı başladı: ' + stats.toplam + ' hareket...', true);
+
+      for (var i = 0; i < allRows.length; i++) {
+        var row = allRows[i];
         try {
-          var existing = await a.client
-            .from('banka_hareketleri')
-            .select('id')
-            .eq('company_id', a.companyId)
-            .eq('dedupe_key', body.dedupe_key)
-            .maybeSingle();
-          if (existing.error) throw existing.error;
-          if (existing.data && existing.data.id) {
-            rows[i].supabaseBankMovementId = existing.data.id;
-            skipped++;
-            continue;
+          var result = await svc.ensureMovement(a.client, a.companyId, row, i);
+          if (result.skipped) {
+            stats.atlanan++;
+          } else if (result.existed) {
+            row.supabaseBankMovementId = result.id;
+            stats.atlanan++;
+          } else {
+            row.supabaseBankMovementId = result.id;
+            stats.yeni++;
           }
-          var inserted = await insertMovement(a.client, body);
-          if (inserted.error) throw inserted.error;
-          rows[i].supabaseBankMovementId = inserted.data && inserted.data.id || '';
-          saved++;
         } catch (err) {
-          errors.push((sourceName(rows[i]) || 'BHD') + ': ' + (err && err.message ? err.message : String(err)));
+          stats.hatali++;
+          stats.hatalar.push({
+            satir: i + 1,
+            kaynak: svc.sourceName(row),
+            aciklama: String(row && (row.aciklama || row.islemAciklamasi || '') || ''),
+            mesaj: err && err.message ? err.message : String(err)
+          });
+          console.error('[OMAS BHD] Hareket aktarılamadı:', i + 1, row, err);
+        }
+
+        if (i % 25 === 0 || i === allRows.length - 1) {
+          showStatus((i + 1) + '/' + stats.toplam + ' işlendi | Yeni: ' + stats.yeni + ' | Atlanan: ' + stats.atlanan + ' | Hatalı: ' + stats.hatali, stats.hatali === 0);
         }
       }
+
       if (window.bhdRawRows && Array.isArray(window.bhdRawRows)) {
-        window.bhdRawRows.forEach(function (row, i) {
-          if (rows[i] && rows[i].supabaseBankMovementId) row.supabaseBankMovementId = rows[i].supabaseBankMovementId;
+        window.bhdRawRows.forEach(function (target, index) {
+          if (allRows[index] && allRows[index].supabaseBankMovementId) target.supabaseBankMovementId = allRows[index].supabaseBankMovementId;
         });
       }
-      showStatus('Supabase BHD kaydi tamam: yeni ' + saved + ', zaten var/atlanan ' + skipped + (errors.length ? ', hata ' + errors.length : '') + '.', errors.length ? false : true);
-      if (errors.length) console.warn('Supabase BHD auto sync errors', errors);
-      try { if (window.omasLoadRuntimeFromSupabase) setTimeout(window.omasLoadRuntimeFromSupabase, 600); } catch (e) {}
-      return { saved: saved, skipped: skipped, errors: errors };
+
+      try { localStorage.setItem(BHD_ROWS, JSON.stringify(allRows)); } catch (ignore) {}
+
+      stats.veritabaniToplami = await countRows(a.client, a.companyId);
+      stats.sureMs = Date.now() - startedAt;
+
+      var summary = 'BHD aktarımı tamamlandı. | Toplam: ' + stats.toplam + ' | Yeni: ' + stats.yeni + ' | Mevcut/atlanan: ' + stats.atlanan + ' | Hatalı: ' + stats.hatali + ' | Süre: ' + (stats.sureMs / 1000).toFixed(2) + ' sn | Veritabanı toplamı: ' + stats.veritabaniToplami + ' hareket';
+      showStatus(summary, stats.hatali === 0);
+      if (stats.hatalar.length) console.warn('[OMAS BHD] Hata raporu', stats.hatalar);
+
+      window.dispatchEvent(new CustomEvent('omas:bhd-synced', { detail: stats }));
+      return stats;
     } finally {
       syncing = false;
       if (queued) setTimeout(function () { syncRows('queued'); }, 500);
@@ -197,19 +129,21 @@
   }
 
   function schedule(reason) {
-    setTimeout(function () { syncRows(reason).catch(function (err) {
-      showStatus('Supabase BHD kaydi hatasi: ' + (err && err.message ? err.message : String(err)), false);
-    }); }, 350);
+    setTimeout(function () {
+      syncRows(reason).catch(function (err) {
+        showStatus('Supabase BHD aktarım hatası: ' + (err && err.message ? err.message : String(err)), false);
+      });
+    }, 350);
   }
 
   var nativeSetItem = Storage.prototype.setItem;
-  if (!nativeSetItem.__omasBhdAutoSync) {
+  if (!nativeSetItem.__omasBhdAutoSyncV2) {
     var wrapped = function (key, value) {
       var result = nativeSetItem.apply(this, arguments);
       if (this === window.localStorage && key === BHD_ROWS) schedule('localStorage');
       return result;
     };
-    wrapped.__omasBhdAutoSync = true;
+    wrapped.__omasBhdAutoSyncV2 = true;
     Storage.prototype.setItem = wrapped;
   }
 
@@ -217,8 +151,8 @@
   window.addEventListener('omas:auth-ready', function () { setTimeout(function () { schedule('auth-ready'); }, 1200); });
   document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { schedule('dom-ready'); }, 1800); });
   setTimeout(function () { schedule('late-load'); }, 2500);
-  document.addEventListener('click', function (ev) {
-    var btn = ev.target && ev.target.closest && ev.target.closest('#bhdV267Read');
-    if (btn) setTimeout(function () { schedule('read-click'); }, 1800);
+  document.addEventListener('click', function (event) {
+    var button = event.target && event.target.closest && event.target.closest('#bhdV267Read');
+    if (button) setTimeout(function () { schedule('read-click'); }, 1800);
   }, true);
 })();

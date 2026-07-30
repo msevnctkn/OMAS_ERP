@@ -310,6 +310,8 @@
   }
 
   async function syncXmlRowsToSupabase() {
+    console.log("XML SYNC VERSION = 20260729-1");
+    console.log(window.OMASInvoiceService);
     var startedAt = Date.now();
     var auth = requireClient();
 
