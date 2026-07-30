@@ -46,8 +46,9 @@
     var svc = service();
     return rows.length + ':' + rows.map(function (row, index) { return svc.dedupeKey(row, index); }).join('~').slice(0, 8000);
   }
-
+  console.log("SYNC COMPANY =", a.companyId);
   async function countRows(client, companyId) {
+    console.log("COUNT COMPANY =", companyId);
     var result = await client.from('banka_hareketleri').select('id', { count: 'exact', head: true }).eq('company_id', companyId);
     if (result.error) throw result.error;
     return result.count || 0;
@@ -94,6 +95,7 @@
       for (var i = 0; i < allRows.length; i++) {
         var row = allRows[i];
         try {
+          console.log("INSERT COMPANY =", companyId);
           var result = await svc.ensureMovement(a.client, a.companyId, row, i);
           if (result.skipped) {
             stats.atlanan++;
