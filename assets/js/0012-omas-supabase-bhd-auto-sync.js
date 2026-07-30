@@ -68,6 +68,21 @@
     try {
       var svc = service();
       var allRows = readRows();
+      var isSupabaseRuntime = allRows.length > 0 && allRows.every(function (row) {
+      return row &&
+        row.bhdFileId === 'supabase:banka_hareketleri' &&
+        row.supabaseBankMovementId;
+    });
+
+    if (isSupabaseRuntime && reason !== 'manual') {
+      return {
+        toplam: allRows.length,
+        yeni: 0,
+        atlanan: 0,
+        hatali: 0,
+        runtimeOnly: true
+      };
+    }
       var sig = signature(allRows);
       if (!allRows.length) return { toplam: 0, yeni: 0, atlanan: 0, hatali: 0 };
       if (sig === lastSig && reason !== 'manual') return { toplam: allRows.length, yeni: 0, atlanan: allRows.length, hatali: 0, unchanged: true };
@@ -148,9 +163,7 @@
   }
 
   window.omasSyncBhdRowsToSupabase = syncRows;
-  window.addEventListener('omas:auth-ready', function () { setTimeout(function () { schedule('auth-ready'); }, 1200); });
-  document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { schedule('dom-ready'); }, 1800); });
-  setTimeout(function () { schedule('late-load'); }, 2500);
+
   document.addEventListener('click', function (event) {
     var button = event.target && event.target.closest && event.target.closest('#bhdV267Read');
     if (button) setTimeout(function () { schedule('read-click'); }, 1800);
