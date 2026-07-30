@@ -188,7 +188,7 @@
       }
       showStatus('Supabase BHD kaydi tamam: yeni ' + saved + ', zaten var/atlanan ' + skipped + (errors.length ? ', hata ' + errors.length : '') + '.', errors.length ? false : true);
       if (errors.length) console.warn('Supabase BHD auto sync errors', errors);
-      try { if (window.omasLoadRuntimeFromSupabase) setTimeout(window.omasLoadRuntimeFromSupabase, 600); } catch (e) {}
+      
       return { saved: saved, skipped: skipped, errors: errors };
     } finally {
       syncing = false;
@@ -201,7 +201,7 @@
       showStatus('Supabase BHD kaydi hatasi: ' + (err && err.message ? err.message : String(err)), false);
     }); }, 350);
   }
-
+/*
   var nativeSetItem = Storage.prototype.setItem;
   if (!nativeSetItem.__omasBhdAutoSync) {
     var wrapped = function (key, value) {
@@ -212,8 +212,12 @@
     wrapped.__omasBhdAutoSync = true;
     Storage.prototype.setItem = wrapped;
   }
-
+  */
   window.omasSyncBhdRowsToSupabase = syncRows;
+  
+
+  
+  
   /*
   window.addEventListener('omas:auth-ready', function () { setTimeout(function () { schedule('auth-ready'); }, 1200); });
   document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { schedule('dom-ready'); }, 1800); });
