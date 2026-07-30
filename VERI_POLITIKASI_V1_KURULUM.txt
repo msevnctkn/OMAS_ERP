@@ -1,0 +1,13 @@
+OMAS ERP VERİ POLİTİKASI V1
+
+1) Bu paketi mevcut proje klasörünün üzerine çıkarın.
+2) Yeni SQL çalıştırmak gerekmez.
+3) Tarayıcıyı tamamen kapatıp yeniden açın ve Ctrl+F5 yapın.
+4) BHD > Kalıcı Hafıza Yönetimi ekranında "Dosya saklama politikası" paneli görünür.
+5) Eski bhd_statement dosyalarını bu panelden silebilirsiniz.
+
+DEĞİŞİKLİKLER
+- Yeni banka ekstresi PDF/XLS/CSV dosyaları Supabase Storage'a yüklenmez.
+- Banka hareketleri veritabanında kalmaya devam eder.
+- Ödeme dekontları payment_receipt olarak saklanmaya devam eder.
+- Kategori raporu ve mevcut BHD okuma koduna dokunulmamıştır.
