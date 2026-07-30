@@ -10,14 +10,36 @@
   }
 
   function readRows() {
-    try {
-      var live = window.bhdRawRows && Array.isArray(window.bhdRawRows) ? window.bhdRawRows : [];
-      if (live.length) return live.slice();
-      return JSON.parse(localStorage.getItem(BHD_ROWS) || '[]') || [];
-    } catch (err) {
-      return [];
+  try {
+
+    // Yeni mimari: Öncelik Workspace
+    if (window.OMAS &&
+        OMAS.Workspace &&
+        typeof OMAS.Workspace.getBhdDraftRows === 'function') {
+
+      var draft = OMAS.Workspace.getBhdDraftRows();
+
+      if (Array.isArray(draft) && draft.length) {
+        return draft.slice();
+      }
     }
+
+    // Geriye dönük uyumluluk
+    var live = window.bhdRawRows && Array.isArray(window.bhdRawRows)
+      ? window.bhdRawRows
+      : [];
+
+    if (live.length) {
+      return live.slice();
+    }
+
+    // Son çare (legacy)
+    return JSON.parse(localStorage.getItem(BHD_ROWS) || '[]') || [];
+
+  } catch (err) {
+    return [];
   }
+}
 
   function norm(value) {
     return String(value || '')
