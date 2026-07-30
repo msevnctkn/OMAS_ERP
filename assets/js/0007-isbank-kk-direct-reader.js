@@ -314,6 +314,9 @@
     if (statusEl) statusEl.textContent = doneText;
     showBigStatus(doneText);
     rerender();
+    window.dispatchEvent(new CustomEvent('omas:bhd-rows-loaded', {
+      detail: { rows: allRows.slice(), source: '0007-isbank-kk-direct-reader' }
+    }));
     if (readBtn) readBtn.disabled = false;
   }
   document.addEventListener('click', function (ev) {

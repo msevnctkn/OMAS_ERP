@@ -263,6 +263,9 @@
     write(ROWS_KEY, allRows);
     if (statusEl) statusEl.textContent = 'Ziraat KK dogrudan okundu. Eklenen hareket: ' + allRows.length + '.' + archiveNote;
     rerender();
+    window.dispatchEvent(new CustomEvent('omas:bhd-rows-loaded', {
+      detail: { rows: allRows.slice(), source: '0006-ziraat-kk-direct-reader' }
+    }));
     if (readBtn) readBtn.disabled = false;
   }
   document.addEventListener('click', function (ev) {

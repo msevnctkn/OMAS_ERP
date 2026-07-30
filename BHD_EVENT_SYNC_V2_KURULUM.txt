@@ -1,0 +1,27 @@
+OMAS ERP - BHD EVENT SYNC V2
+
+Bu sürümde 0012-omas-supabase-bhd-auto-sync.js baştan yazıldı.
+
+Değişiklikler:
+- Storage.prototype.setItem global override kaldırıldı.
+- auth-ready / dom-ready / late-load / read-click çoklu tetikleyicileri kaldırıldı.
+- BHD aktarımı yalnızca okuyucu işi tamamladığında bir kez başlar.
+- Generic okuyucu ve 4 doğrudan banka okuyucusu omas:bhd-rows-loaded olayı gönderir.
+- Aynı dosya içindeki tekrar hareketler Supabase'e gitmeden önce ayrılır.
+- Özet artık Okunan / Benzersiz / Dosya içi tekrar / Yeni / Mevcut / Hatalı sayılarını ayrı gösterir.
+- Import sırasında ikinci bir okuma gelirse yalnızca son snapshot sıraya alınır.
+
+Kurulum:
+1. ZIP içeriğini mevcut proje klasörünün üzerine çıkarın.
+2. Tarayıcıyı tamamen kapatıp index.html'i yeniden açın.
+3. Ctrl+F5 yapın.
+4. Bakım panelinden BHD/Ödeme verilerini temizleyin.
+5. Tek bir dosya yükleyerek test edin.
+
+Beklenen ilk yükleme:
+Yeni = benzersiz hareket sayısı
+Mevcut/atlanan = 0
+
+Aynı dosyanın ikinci yüklemesi:
+Yeni = 0
+Mevcut/atlanan = benzersiz hareket sayısı

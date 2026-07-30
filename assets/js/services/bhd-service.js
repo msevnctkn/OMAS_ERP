@@ -116,6 +116,43 @@
     return inserted;
   }
 
+  async function updateExisting(client, id, body) {
+    var mutable = {
+      cari_id: body.cari_id,
+      bank_name: body.bank_name,
+      account_name: body.account_name,
+      transaction_date: body.transaction_date,
+      description: body.description,
+      party_name: body.party_name,
+      incoming: body.incoming,
+      outgoing: body.outgoing,
+      balance: body.balance,
+      company_code: body.company_code,
+      category_main: body.category_main,
+      category_sub: body.category_sub,
+      is_deleted: false
+    };
+
+    var updated = await client
+      .from('banka_hareketleri')
+      .update(mutable)
+      .eq('id', id)
+      .select('id')
+      .single();
+
+    if (!updated.error) return updated;
+    var message = updated.error && updated.error.message ? updated.error.message : '';
+    if (/company_code|category_main|category_sub|is_deleted|column/i.test(message)) {
+      updated = await client
+        .from('banka_hareketleri')
+        .update(legacyPayload(mutable))
+        .eq('id', id)
+        .select('id')
+        .single();
+    }
+    return updated;
+  }
+
   async function ensureMovement(client, companyId, row, idx) {
     var body = buildPayload(row, idx, companyId);
     if (!body) {
@@ -123,13 +160,21 @@
     }
 
     var existing = await findExisting(client, companyId, body.dedupe_key);
-    if (existing) return { id: existing.id, existed: true, skipped: false, dedupeKey: body.dedupe_key };
+    if (existing) {
+      var updated = await updateExisting(client, existing.id, body);
+      if (updated.error) throw updated.error;
+      return { id: existing.id, existed: true, updated: true, skipped: false, dedupeKey: body.dedupe_key };
+    }
 
     var inserted = await insertMovement(client, body);
     if (inserted.error) {
       if (isDuplicateError(inserted.error)) {
         existing = await findExisting(client, companyId, body.dedupe_key);
-        if (existing) return { id: existing.id, existed: true, skipped: false, dedupeKey: body.dedupe_key };
+        if (existing) {
+          var updatedAfterDuplicate = await updateExisting(client, existing.id, body);
+          if (updatedAfterDuplicate.error) throw updatedAfterDuplicate.error;
+          return { id: existing.id, existed: true, updated: true, skipped: false, dedupeKey: body.dedupe_key };
+        }
       }
       throw inserted.error;
     }
@@ -146,6 +191,7 @@
     dedupeKey: dedupeKey,
     buildPayload: buildPayload,
     findExisting: findExisting,
+    updateExisting: updateExisting,
     ensureMovement: ensureMovement
   };
 })();

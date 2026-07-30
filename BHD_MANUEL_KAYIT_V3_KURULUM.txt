@@ -1,0 +1,21 @@
+OMAS ERP - BHD MANUEL KAYIT V3
+
+YENI AKIS
+1. Dosya Oku: BHD satirlari sadece taslaga/bellege alinir.
+2. Satirlari sil, firma ve kategori eslestirmelerini yap.
+3. Veritabanina Yaz butonuna bas.
+4. Yalnizca o anda taslakta kalan ve son hali verilen satirlar Supabase'e kaydedilir.
+
+DEGISIKLIKLER
+- Otomatik Supabase BHD yazimi tamamen kaldirildi.
+- Dosya okuma sirasinda banka PDF/Excel dosyalari Supabase Storage'a yuklenmez.
+- Veritabanina Yaz butonu eklendi.
+- Firma ve kategori haritalari kayit aninda satirlara uygulanir.
+- Daha once kaydedilmis ayni hareket tekrar kaydedilirse siniflandirma/aciklama alanlari guncellenir.
+- Taslaktan kaydetmeden once silinen satirlar veritabanina gitmez.
+
+KURULUM
+- ZIP'i mevcut proje klasorunun uzerine cikarin.
+- Tarayiciyi tamamen kapatip yeniden acin.
+- Ctrl+F5 yapin.
+- Yeni SQL gerekmiyor.
