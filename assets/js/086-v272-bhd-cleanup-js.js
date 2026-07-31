@@ -13,22 +13,44 @@
   
   
   
-  function setRows(rs){
+function setRows(rs) {
+  // Aynı dizi referansının temizlenmesini önlemek için önce bağımsız kopya al.
+  var cleanRows = Array.isArray(rs)
+    ? rs.map(function (row) {
+        return Object.assign({}, row);
+      })
+    : [];
 
-    OMAS.Workspace.setBhdDraftRows(rs);
+  cleanRows.forEach(function (row, index) {
+    row.sira = index + 1;
+  });
 
-    write(BHD_ROWS, rs);
+  // Ana kaynak Workspace.
+  if (
+    window.OMAS &&
+    OMAS.Workspace &&
+    typeof OMAS.Workspace.setBhdDraftRows === 'function'
+  ) {
+    OMAS.Workspace.setBhdDraftRows(cleanRows);
+  }
 
-    if(window.bhdRawRows && Array.isArray(window.bhdRawRows)){
-        window.bhdRawRows.length = 0;
+  // Legacy ekranlar için cache.
+  write(BHD_ROWS, cleanRows);
 
-        rs.forEach(function(r){
-            window.bhdRawRows.push(r);
-        });
-    }
+  // Workspace adaptörü global diziyi güncellemiyorsa güvenli şekilde güncelle.
+  if (
+    !window.bhdRawRows ||
+    !Array.isArray(window.bhdRawRows)
+  ) {
+    window.bhdRawRows = [];
+  }
+
+  window.bhdRawRows.length = 0;
+
+  cleanRows.forEach(function (row) {
+    window.bhdRawRows.push(Object.assign({}, row));
+  });
 }
-  
-  
   
   
   
