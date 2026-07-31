@@ -231,6 +231,7 @@
     if (Object.keys(bhdState.cat).length) localStorage.setItem(BHD_CAT, JSON.stringify(bhdState.cat));
     localStorage.setItem(PAYMENTS, JSON.stringify(paymentRuntime.payments));
     localStorage.setItem(BHD_LINKS, JSON.stringify(paymentRuntime.links));
+    /*
     if (window.bhdRawRows && Array.isArray(window.bhdRawRows)) {
       window.bhdRawRows.length = 0;
       bhdRows.forEach(function (r, i) {
@@ -240,6 +241,7 @@
     } else {
       window.bhdRawRows = bhdRows.slice();
     }
+      */
     window.__omasSupabaseRuntime = {
       loadedAt: new Date(),
       rows: rows.length,
