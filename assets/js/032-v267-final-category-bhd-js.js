@@ -203,53 +203,7 @@
     h+='</tbody></table></div></div>';
     var kkRows=ag.rows.filter(function(r){return r&&r.ziraatKk;}),bankRows=ag.rows.filter(function(r){return !(r&&r.ziraatKk);});
     if(kkRows.length){h+='<div class="bhd-v267-card"><h4>Kredi Kartı Ekstreleri</h4><div class="bhd-v267-table-wrap"><table class="bhd-v267-table bhd-v267-line-table"><thead><tr><th>Firma Seç</th><th>Tarih</th><th>İşlem Açıklaması</th><th>Tutar</th><th>Kategori Seç</th><th>İşlem</th></tr></thead><tbody>';kkRows.forEach(function(r){var id=bhdId(r),c=bhdRowCat(r),subList=subs[c.main]||[],tl=Number(r.tlTutar||0)||Number(r.giden||0)||Number(r.gelen||0)||0,desc=esc(r.islemAciklamasi||r.aciklama||r.kisiFirma||'');h+='<tr data-bhd-v267-row><td><input class="bhd-v267-company" data-bhd-v267-company="'+esc(id)+'" value="'+esc(bhdRowCompany(r))+'" maxlength="1" placeholder="O/K/R"><br><small>'+esc(firmName(bhdRowCompany(r)))+'</small></td><td>'+esc(r.islemTarihi||r.tarih||'')+'</td><td>'+desc+'</td><td class="amount">'+money(tl)+'</td><td><div class="bhd-v267-selects"><select data-bhd-v267-main="'+esc(id)+'">'+bhdOpts(cats,c.main,'Kategori seç')+'</select><select data-bhd-v267-sub="'+esc(id)+'">'+bhdOpts(subList,c.sub,'Alt kategori seç')+'</select></div></td></tr>';});h+='</tbody></table></div></div>';}
-    if(bankRows.length||!kkRows.length){
-    h+='<div class="bhd-v267-card"><h4>Banka / Hesap Hareketleri</h4><div class="bhd-v267-table-wrap"><table class="bhd-v267-table bhd-v267-line-table"><thead><tr><th>Firma</th><th>Tarih</th><th>Gelen</th><th>Giden</th><th>Net</th><th>Bakiye</th><th>Açıklama</th><th>Kategori Seç</th><th>İşlem</th></tr></thead><tbody>';
-
-    bankRows.forEach(function(r){
-
-        var id = bhdId(r),
-            c = bhdRowCat(r),
-            subList = subs[c.main] || [];
-
-        h += '<tr data-bhd-v267-row>' +
-
-            '<td><input class="bhd-v267-company" data-bhd-v267-company="'+esc(id)+'" value="'+esc(bhdRowCompany(r))+'" maxlength="1" placeholder="O/K/R"><br><small>'+esc(firmName(bhdRowCompany(r)))+'</small></td>' +
-
-            '<td>'+esc(r.tarih||'')+'</td>' +
-
-            '<td class="amount">'+money(r.gelen)+'</td>' +
-
-            '<td class="amount">'+money(r.giden)+'</td>' +
-
-            '<td class="amount">'+money(r.net)+'</td>' +
-
-            '<td class="amount">'+(r.bakiye==null||r.bakiye===''?'':money(r.bakiye))+'</td>' +
-
-            '<td>'+esc(r.aciklama||'')+'</td>' +
-
-            '<td><div class="bhd-v267-selects">' +
-                '<select data-bhd-v267-main="'+esc(id)+'">'+
-                    bhdOpts(cats,c.main,'Kategori seç')+
-                '</select>' +
-                '<select data-bhd-v267-sub="'+esc(id)+'">'+
-                    bhdOpts(subList,c.sub,'Alt kategori seç')+
-                '</select>' +
-            '</div></td>' +
-
-            '<td>' +
-                '<button class="bhd-v267-btn secondary bhd-runtime-edit" data-bhd-id="'+esc(id)+'">🖊 Düzenle</button>' +
-            '</td>' +
-
-            '</tr>';
-    });
-
-    if(!bankRows.length){
-        h+='<tr><td colspan="9">Hesap hareketi yok.</td></tr>';
-    }
-
-    h+='</tbody></table></div></div>';
-}
+    if(bankRows.length||!kkRows.length){h+='<div class="bhd-v267-card"><h4>Banka / Hesap Hareketleri</h4><div class="bhd-v267-table-wrap"><table class="bhd-v267-table bhd-v267-line-table"><thead><tr><th>Firma</th><th>Tarih</th><th>Gelen</th><th>Giden</th><th>Net</th><th>Bakiye</th><th>Açıklama</th><th>Kategori Seç</th></tr></thead><tbody>';bankRows.forEach(function(r){var id=bhdId(r),c=bhdRowCat(r),subList=subs[c.main]||[];h+='<tr data-bhd-v267-row><td><input class="bhd-v267-company" data-bhd-v267-company="'+esc(id)+'" value="'+esc(bhdRowCompany(r))+'" maxlength="1" placeholder="O/K/R"><br><small>'+esc(firmName(bhdRowCompany(r)))+'</small></td><td>'+esc(r.tarih||'')+'</td><td class="amount">'+money(r.gelen)+'</td><td class="amount">'+money(r.giden)+'</td><td class="amount">'+money(r.net)+'</td><td class="amount">'+(r.bakiye==null||r.bakiye===''?'':money(r.bakiye))+'</td><td>'+esc(r.aciklama||'')+'</td><td><div class="bhd-v267-selects"><select data-bhd-v267-main="'+esc(id)+'">'+bhdOpts(cats,c.main,'Kategori seç')+'</select><select data-bhd-v267-sub="'+esc(id)+'">'+bhdOpts(subList,c.sub,'Alt kategori seç')+'</select></div></td></tr>';});if(!bankRows.length)h+='<tr><td colspan="8">Hesap hareketi yok.</td></tr>';h+='</tbody></table></div></div>';}
     h+='</div>';page.innerHTML=h;bindBhdPage();bhdRenderPdfDebugBox();}
   
     function bindBhdPage(){
