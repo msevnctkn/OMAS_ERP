@@ -9,7 +9,29 @@
   function code(v){v=String(v||'').toUpperCase().trim();return /^[OKR]$/.test(v)?v:''}
   function firmName(v){v=code(v)||'NONE';return v==='O'?'OMAS OTOMASYON':(v==='K'?'OMAS KONSEPT':(v==='R'?'ORTAK HARCAMA':'Firma Secilmedi'))}
   function rows(){var live=(window.bhdRawRows&&Array.isArray(window.bhdRawRows))?window.bhdRawRows:[];return live.length?live:read(BHD_ROWS,[])}
-  function setRows(rs){write(BHD_ROWS,rs);if(window.bhdRawRows&&Array.isArray(window.bhdRawRows)){window.bhdRawRows.length=0;rs.forEach(function(r){window.bhdRawRows.push(r)})}}
+  
+  
+  
+  
+  function setRows(rs){
+
+    OMAS.Workspace.setBhdDraftRows(rs);
+
+    write(BHD_ROWS, rs);
+
+    if(window.bhdRawRows && Array.isArray(window.bhdRawRows)){
+        window.bhdRawRows.length = 0;
+
+        rs.forEach(function(r){
+            window.bhdRawRows.push(r);
+        });
+    }
+}
+  
+  
+  
+  
+  
   function deleted(){return read(BHD_DELETED,[])}function setDeleted(rs){write(BHD_DELETED,rs)}
   function idOf(r){return [r&&r.kaynak,r&&r.referans,r&&r.sira,r&&r.tarih,r&&r.aciklama].join('|')}
   function amount(r){return Number(r&&r.giden||0)||Math.abs(Number(r&&r.net||0))||Number(r&&r.gelen||0)||0}
