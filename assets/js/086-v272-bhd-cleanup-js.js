@@ -8,7 +8,38 @@
   function money(v){return Number(v||0).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})}
   function code(v){v=String(v||'').toUpperCase().trim();return /^[OKR]$/.test(v)?v:''}
   function firmName(v){v=code(v)||'NONE';return v==='O'?'OMAS OTOMASYON':(v==='K'?'OMAS KONSEPT':(v==='R'?'ORTAK HARCAMA':'Firma Secilmedi'))}
-  function rows(){var live=(window.bhdRawRows&&Array.isArray(window.bhdRawRows))?window.bhdRawRows:[];return live.length?live:read(BHD_ROWS,[])}
+  function rows() {
+  var draft = [];
+
+  if (
+    window.OMAS &&
+    OMAS.Workspace &&
+    typeof OMAS.Workspace.getBhdDraftRows === 'function'
+  ) {
+    draft = OMAS.Workspace.getBhdDraftRows();
+  }
+
+  if (Array.isArray(draft) && draft.length) {
+    return draft.map(function (row) {
+      return Object.assign({}, row);
+    });
+  }
+
+  var live =
+    window.bhdRawRows && Array.isArray(window.bhdRawRows)
+      ? window.bhdRawRows
+      : [];
+
+  if (live.length) {
+    return live.map(function (row) {
+      return Object.assign({}, row);
+    });
+  }
+
+  return read(BHD_ROWS, []).map(function (row) {
+    return Object.assign({}, row);
+  });
+}
   
   
   
