@@ -51,50 +51,189 @@
   function bhdAggregate(){var rows=bhdRows(),cm=bhdCompanyMap(),catm=bhdCatMap(),firms={O:{total:0,count:0,rows:[]},K:{total:0,count:0,rows:[]},R:{total:0,count:0,rows:[]},NONE:{total:0,count:0,rows:[]}},tree={},grand=0;rows.forEach(function(r){var id=bhdId(r),fk=firmKey(cm[id]||r.sirket||r.firma),ct=bhdRowCat(r),amt=bhdAmount(r);grand+=amt;firms[fk].total+=amt;firms[fk].count++;firms[fk].rows.push(r);if(!tree[fk])tree[fk]={};if(!tree[fk][ct.main])tree[fk][ct.main]={total:0,count:0,rows:[],subs:{}};tree[fk][ct.main].total+=amt;tree[fk][ct.main].count++;tree[fk][ct.main].rows.push(r);var sub=ct.sub||'-';if(!tree[fk][ct.main].subs[sub])tree[fk][ct.main].subs[sub]={total:0,count:0,rows:[]};tree[fk][ct.main].subs[sub].total+=amt;tree[fk][ct.main].subs[sub].count++;tree[fk][ct.main].subs[sub].rows.push(r);});return {rows:rows,firms:firms,tree:tree,grand:grand};}
   function bhdDetail(rows,title){var kk=rows.some(function(r){return r&&r.ziraatKk;});var h='<div class="v267-detail-box"><h5>'+esc(title)+' - '+rows.length+' hareket</h5><div class="bhd-v267-table-wrap"><table class="v267-detail-table"><thead>';if(kk){h+='<tr><th>Firma</th><th>Tarih</th><th>İşlem Açıklaması</th><th>Tutar</th></tr></thead><tbody>';if(!rows.length)h+='<tr><td colspan="4">Kayıt yok.</td></tr>';rows.forEach(function(r){var tl=Number(r.tlTutar||0)||Number(r.giden||0)||Number(r.gelen||0)||0;h+='<tr><td>'+esc(firmName(bhdRowCompany(r)))+'</td><td>'+esc(r.islemTarihi||r.tarih||'')+'</td><td>'+esc(r.islemAciklamasi||r.aciklama||r.kisiFirma||'')+'</td><td class="amount">'+money(tl)+'</td></tr>';});}else{h+='<tr><th>Firma</th><th>Tarih</th><th>Kişi/Firma</th><th>Kategori</th><th>Alt Kategori</th><th>Gelen</th><th>Giden</th><th>Net</th><th>Açıklama</th><th>Kaynak</th></tr></thead><tbody>';if(!rows.length)h+='<tr><td colspan="10">Kayıt yok.</td></tr>';rows.forEach(function(r){var c=bhdRowCat(r);h+='<tr><td>'+esc(firmName(bhdRowCompany(r)))+'</td><td>'+esc(r.tarih||'')+'</td><td>'+esc(r.kisiFirma||'')+'</td><td>'+esc(c.main)+'</td><td>'+esc(c.sub)+'</td><td class="amount">'+money(r.gelen)+'</td><td class="amount">'+money(r.giden)+'</td><td class="amount">'+money(r.net)+'</td><td>'+esc(r.aciklama||'')+'</td><td>'+esc(r.kaynak||'')+'</td></tr>';});}return h+'</tbody></table></div></div>';}  function ensureBhdShell(){var mod=q('#bhdModule .module-box');if(!mod)return false;var nav=q('#bhdV267Subnav',mod);if(!nav){nav=document.createElement('div');nav.id='bhdV267Subnav';nav.className='bhd-v267-subnav';nav.innerHTML='<button type="button" data-bhd-v267-view="analysis" class="active">BHD Analiz</button><button type="button" data-bhd-v267-view="category">Kategori Raporu</button>';var title=q('.module-title',mod);if(title&&title.nextSibling)mod.insertBefore(nav,title.nextSibling);else mod.insertBefore(nav,mod.firstChild);}var page=q('#bhdCategoryReportPage',mod);if(!page){page=document.createElement('div');page.id='bhdCategoryReportPage';mod.appendChild(page);}return true;}
   function setBhdMode(mode){var m=q('#bhdModule');if(!m)return;ensureBhdShell();m.classList.toggle('bhd-v267-category-mode',mode==='category');qa('#bhdV267Subnav button').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-bhd-v267-view')===mode);});if(mode==='category')renderBhdCategory();}
-  function renderBhdCategory(){if(!ensureBhdShell())return;saveBhdRows();var page=q('#bhdCategoryReportPage'),ag=bhdAggregate(),cats=bhdCats(),subs=bhdSubs();var kpis=['O','K','R','NONE'].map(function(fk){var f=ag.firms[fk],p=ag.grand?f.total/ag.grand*100:0;return '<div class="bhd-v267-kpi" data-bhd-v267-firm="'+fk+'"><span>'+esc(firmName(fk))+'</span><strong>'+money(f.total)+' TL</strong><small>'+f.count+' hareket | Pay '+pct(p)+'</small></div>';}).join('');var h='<div class="v189-page-head"><h3>BHD Kategori Raporu</h3><span>Kredi kartı ekstreleri ve banka hareketleri için kategori/firma kırılımı.</span></div><div class="bhd-v267-toolbar"><div class="bhd-v267-field"><label>Dosya Yükle</label><input id="bhdV267Files" type="file" accept=".xlsx,.xls,.csv,.pdf" multiple></div><button class="bhd-v267-btn" type="button" id="bhdV267Read">Oku ve Hafızaya Al</button><button class="bhd-v267-btn success" type="button" id="bhdV267Save">Veritabanına Kaydet</button><div class="bhd-v267-field"><label>Arama</label><input id="bhdV267Search" type="search" placeholder="Firma, tarih, açıklama, kategori ara"></div><button class="bhd-v267-btn secondary" type="button" id="bhdV267Excel">Excel Al</button> <div id="bhdV267Status" class="bhd-v267-note" style="margin:0;flex:1 1 280px">Henüz dosya okunmadı.</div></div><div class="bhd-v267-note">PDF kredi kartı veya banka hareket dossyası yükleyebilirsin. Verileri Kalıcı olarak Kaydetmek istiyorsan Veritabanına kaydet butonuna bas.</div><div class="bhd-v267-kpis">'+kpis+'</div><details id="bhdPdfDebugBox" class="bhd-v267-card" style="display:block"><summary>PDF Okuma Debug</summary><div class="bhd-v267-note">Henüz PDF metni yakalanmadı.</div></details><div id="bhdV267Detail" class="v267-detail-panel" style="display:none"></div><div class="bhd-v267-grid"><div class="bhd-v267-card"><h4>Ana Kategori / Alt Kategori Etki Özeti</h4><div class="bhd-v267-table-wrap"><table class="bhd-v267-table"><thead><tr><th>Faturalar</th><th>No</th><th>Harcama Kalemi</th><th>Harcama Tutarı</th><th>Firma İçi %</th><th>Ana Kategori İçi %</th></tr></thead><tbody>';
+  function renderBhdCategory() {
+    if (!ensureBhdShell()) return;
+
+    saveBhdRows();
+
+    var page = q('#bhdCategoryReportPage'),
+        ag = bhdAggregate(),
+        cats = bhdCats(),
+        subs = bhdSubs();
+
+    var kpis = ['O', 'K', 'R', 'NONE'].map(function (fk) {
+        var f = ag.firms[fk],
+            p = ag.grand ? f.total / ag.grand * 100 : 0;
+
+        return '<div class="bhd-v267-kpi" data-bhd-v267-firm="' + fk + '">' +
+            '<span>' + esc(firmName(fk)) + '</span>' +
+            '<strong>' + money(f.total) + ' TL</strong>' +
+            '<small>' + f.count + ' hareket | Pay ' + pct(p) + '</small>' +
+            '</div>';
+    }).join('');
+
+    var h =
+        '<div class="v189-page-head">' +
+        '<h3>BHD Kategori Raporu</h3>' +
+        '<span>Kredi kartı ekstreleri ve banka hareketleri için kategori/firma kırılımı.</span>' +
+        '</div>' +
+
+        '<div class="bhd-v267-toolbar">' +
+
+        '<div class="bhd-v267-field">' +
+        '<label>Dosya Yükle</label>' +
+        '<input id="bhdV267Files" type="file" accept=".xlsx,.xls,.csv,.pdf" multiple>' +
+        '</div>' +
+
+        '<button class="bhd-v267-btn" type="button" id="bhdV267Read">' +
+        'Oku ve Hafızaya Al' +
+        '</button>' +
+
+        '<button class="bhd-v267-btn success" type="button" id="bhdV267Save">' +
+        'Veritabanına Kaydet' +
+        '</button>' +
+
+        '<button class="bhd-v267-btn secondary" type="button" id="bhdV267LoadRuntime">' +
+        'Kayıtlı Hareketleri Göster' +
+        '</button>' +
+
+        '<div class="bhd-v267-field">' +
+        '<label>Arama</label>' +
+        '<input id="bhdV267Search" type="search" placeholder="Firma, tarih, açıklama, kategori ara">' +
+        '</div>' +
+
+        '<button class="bhd-v267-btn secondary" type="button" id="bhdV267Excel">' +
+        'Excel Al' +
+        '</button>' +
+
+        '<div id="bhdV267Status" class="bhd-v267-note" style="margin:0;flex:1 1 280px">' +
+        'Henüz dosya okunmadı.' +
+        '</div>' +
+
+        '</div>' +
+
+        '<div class="bhd-v267-note">' +
+        'PDF kredi kartı veya banka hareket dosyası yükleyebilirsin. ' +
+        'Verileri kalıcı olarak kaydetmek istiyorsan "Veritabanına Kaydet" butonunu kullan.' +
+        '</div>' +
+
+        '<div class="bhd-v267-kpis">' + kpis + '</div>' +
+
+        '<details id="bhdPdfDebugBox" class="bhd-v267-card" style="display:block">' +
+        '<summary>PDF Okuma Debug</summary>' +
+        '<div class="bhd-v267-note">Henüz PDF metni yakalanmadı.</div>' +
+        '</details>' +
+
+        '<div id="bhdV267Detail" class="v267-detail-panel" style="display:none"></div>' +
+
+        '<div class="bhd-v267-grid">' +
+        '<div class="bhd-v267-card">' +
+        '<h4>Ana Kategori / Alt Kategori Etki Özeti</h4>' +
+        '<div class="bhd-v267-table-wrap">' +
+        '<table class="bhd-v267-table">' +
+        '<thead>' +
+        '<tr>' +
+        '<th>Faturalar</th>' +
+        '<th>No</th>' +
+        '<th>Harcama Kalemi</th>' +
+        '<th>Harcama Tutarı</th>' +
+        '<th>Firma İçi %</th>' +
+        '<th>Ana Kategori İçi %</th>' +
+        '</tr>' +
+        '</thead>' +
+        '<tbody>';
+
+
+
+
+
+
     ['O','K','R','NONE'].forEach(function(fk){var f=ag.firms[fk];if(!f.total)return;h+='<tr><td colspan="6" class="v264-company-title">'+esc(firmName(fk))+' - Toplam '+money(f.total)+' TL</td></tr>';Object.keys(ag.tree[fk]||{}).sort(function(a,b){return ag.tree[fk][b].total-ag.tree[fk][a].total;}).forEach(function(main,i){var m=ag.tree[fk][main],mp=f.total?m.total/f.total*100:0;h+='<tr class="bhd-v267-main" data-bhd-v267-main="'+esc(main)+'" data-bhd-v267-firm="'+fk+'"><td><button class="v267-show-btn" type="button" data-bhd-v267-show="1">Faturaları Göster</button></td><td class="amount">'+(i+1)+'</td><td>'+esc(main)+'</td><td class="amount">'+money(m.total)+' TL</td><td class="amount">'+pct(mp)+'</td><td class="amount">100%</td></tr>';Object.keys(m.subs).sort(function(a,b){return m.subs[b].total-m.subs[a].total;}).forEach(function(sub){var s=m.subs[sub],sp=m.total?s.total/m.total*100:0,tp=f.total?s.total/f.total*100:0;h+='<tr data-bhd-v267-row><td></td><td></td><td>'+esc(sub)+'</td><td class="amount">'+money(s.total)+' TL</td><td class="amount">'+pct(tp)+'</td><td class="amount">'+pct(sp)+'</td></tr>';});});});
     h+='</tbody></table></div></div>';
     var kkRows=ag.rows.filter(function(r){return r&&r.ziraatKk;}),bankRows=ag.rows.filter(function(r){return !(r&&r.ziraatKk);});
-    if(kkRows.length){h+='<div class="bhd-v267-card"><h4>Kredi Kartı Ekstreleri</h4><div class="bhd-v267-table-wrap"><table class="bhd-v267-table bhd-v267-line-table"><thead><tr><th>Firma Seç</th><th>Tarih</th><th>İşlem Açıklaması</th><th>Tutar</th><th>Kategori Seç</th></tr></thead><tbody>';kkRows.forEach(function(r){var id=bhdId(r),c=bhdRowCat(r),subList=subs[c.main]||[],tl=Number(r.tlTutar||0)||Number(r.giden||0)||Number(r.gelen||0)||0,desc=esc(r.islemAciklamasi||r.aciklama||r.kisiFirma||'');h+='<tr data-bhd-v267-row><td><input class="bhd-v267-company" data-bhd-v267-company="'+esc(id)+'" value="'+esc(bhdRowCompany(r))+'" maxlength="1" placeholder="O/K/R"><br><small>'+esc(firmName(bhdRowCompany(r)))+'</small></td><td>'+esc(r.islemTarihi||r.tarih||'')+'</td><td>'+desc+'</td><td class="amount">'+money(tl)+'</td><td><div class="bhd-v267-selects"><select data-bhd-v267-main="'+esc(id)+'">'+bhdOpts(cats,c.main,'Kategori seç')+'</select><select data-bhd-v267-sub="'+esc(id)+'">'+bhdOpts(subList,c.sub,'Alt kategori seç')+'</select></div></td></tr>';});h+='</tbody></table></div></div>';}
+    if(kkRows.length){h+='<div class="bhd-v267-card"><h4>Kredi Kartı Ekstreleri</h4><div class="bhd-v267-table-wrap"><table class="bhd-v267-table bhd-v267-line-table"><thead><tr><th>Firma Seç</th><th>Tarih</th><th>İşlem Açıklaması</th><th>Tutar</th><th>Kategori Seç</th><th>İşlem</th></tr></thead><tbody>';kkRows.forEach(function(r){var id=bhdId(r),c=bhdRowCat(r),subList=subs[c.main]||[],tl=Number(r.tlTutar||0)||Number(r.giden||0)||Number(r.gelen||0)||0,desc=esc(r.islemAciklamasi||r.aciklama||r.kisiFirma||'');h+='<tr data-bhd-v267-row><td><input class="bhd-v267-company" data-bhd-v267-company="'+esc(id)+'" value="'+esc(bhdRowCompany(r))+'" maxlength="1" placeholder="O/K/R"><br><small>'+esc(firmName(bhdRowCompany(r)))+'</small></td><td>'+esc(r.islemTarihi||r.tarih||'')+'</td><td>'+desc+'</td><td class="amount">'+money(tl)+'</td><td><div class="bhd-v267-selects"><select data-bhd-v267-main="'+esc(id)+'">'+bhdOpts(cats,c.main,'Kategori seç')+'</select><select data-bhd-v267-sub="'+esc(id)+'">'+bhdOpts(subList,c.sub,'Alt kategori seç')+'</select></div></td></tr>';});h+='</tbody></table></div></div>';}
     if(bankRows.length||!kkRows.length){h+='<div class="bhd-v267-card"><h4>Banka / Hesap Hareketleri</h4><div class="bhd-v267-table-wrap"><table class="bhd-v267-table bhd-v267-line-table"><thead><tr><th>Firma</th><th>Tarih</th><th>Gelen</th><th>Giden</th><th>Net</th><th>Bakiye</th><th>Açıklama</th><th>Kategori Seç</th></tr></thead><tbody>';bankRows.forEach(function(r){var id=bhdId(r),c=bhdRowCat(r),subList=subs[c.main]||[];h+='<tr data-bhd-v267-row><td><input class="bhd-v267-company" data-bhd-v267-company="'+esc(id)+'" value="'+esc(bhdRowCompany(r))+'" maxlength="1" placeholder="O/K/R"><br><small>'+esc(firmName(bhdRowCompany(r)))+'</small></td><td>'+esc(r.tarih||'')+'</td><td class="amount">'+money(r.gelen)+'</td><td class="amount">'+money(r.giden)+'</td><td class="amount">'+money(r.net)+'</td><td class="amount">'+(r.bakiye==null||r.bakiye===''?'':money(r.bakiye))+'</td><td>'+esc(r.aciklama||'')+'</td><td><div class="bhd-v267-selects"><select data-bhd-v267-main="'+esc(id)+'">'+bhdOpts(cats,c.main,'Kategori seç')+'</select><select data-bhd-v267-sub="'+esc(id)+'">'+bhdOpts(subList,c.sub,'Alt kategori seç')+'</select></div></td></tr>';});if(!bankRows.length)h+='<tr><td colspan="8">Hesap hareketi yok.</td></tr>';h+='</tbody></table></div></div>';}
     h+='</div>';page.innerHTML=h;bindBhdPage();bhdRenderPdfDebugBox();}
-  function bindBhdPage(){
-    var s=q('#bhdV267Search');
-    if(s)s.oninput=function(){
-        var t=norm(this.value);
-        qa('#bhdCategoryReportPage [data-bhd-v267-row],#bhdCategoryReportPage .bhd-v267-main')
-        .forEach(function(r){
-            r.style.display=!t||norm(r.textContent).indexOf(t)>-1?'':'none';
-        });
-    };
+  
+    function bindBhdPage(){
 
-    var readBtn=q('#bhdV267Read');
-    if(readBtn)readBtn.onclick=readBhdFiles;
+    // Kayıtlı hareketleri göster
+    var loadBtn = q('#bhdV267LoadRuntime');
+    if(loadBtn){
+        loadBtn.onclick = async function(){
 
-    var saveBtn=q('#bhdV267Save');
-    if(saveBtn)saveBtn.onclick=async function(){
+            if(window.omasLoadRuntimeFromSupabase){
+                await window.omasLoadRuntimeFromSupabase();
+            }
 
-        var result=await OMAS.Services.BHD.saveToDatabase();
+            OMAS.Workspace.setBhdDraftRows(
+                OMAS.Runtime.getBhdRows()
+            );
 
-        if(result.errors && result.errors.length){
-            return;
-        }
+            renderBhdCategory();
 
-        if(window.omasLoadRuntimeFromSupabase){
-          OMAS.Workspace.setBhdDraftRows([]);
+            var status = q('#bhdV267Status');
+            if(status){
+                status.textContent = "Kayıtlı banka hareketleri yüklendi.";
+            }
+        };
+    }
 
-          if(window.bhdRawRows){
-              window.bhdRawRows.length=0;
-          }
-            await window.omasLoadRuntimeFromSupabase();
-        }
+    // Arama
+    var s = q('#bhdV267Search');
+    if(s){
+        s.oninput = function(){
+            var t = norm(this.value);
 
-        renderBhdCategory();
-    };
+            qa('#bhdCategoryReportPage [data-bhd-v267-row],#bhdCategoryReportPage .bhd-v267-main')
+            .forEach(function(r){
+                r.style.display = !t || norm(r.textContent).indexOf(t) > -1 ? '' : 'none';
+            });
+        };
+    }
 
-    var ex=q('#bhdV267Excel');
-    if(ex)ex.onclick=bhdExcel;
+    // PDF Oku
+    var readBtn = q('#bhdV267Read');
+    if(readBtn){
+        readBtn.onclick = readBhdFiles;
+    }
+
+    // Veritabanına Kaydet
+    var saveBtn = q('#bhdV267Save');
+    if(saveBtn){
+        saveBtn.onclick = async function(){
+
+            var result = await OMAS.Services.BHD.saveToDatabase();
+
+            if(result.errors && result.errors.length){
+                return;
+            }
+
+            // Taslağı temizle
+            OMAS.Workspace.setBhdDraftRows([]);
+
+            if(window.bhdRawRows){
+                window.bhdRawRows.length = 0;
+            }
+
+            renderBhdCategory();
+
+            var status = q('#bhdV267Status');
+            if(status){
+                status.textContent = "Veriler başarıyla veritabanına kaydedildi.";
+            }
+        };
+    }
+
+    // Excel
+    var ex = q('#bhdV267Excel');
+    if(ex){
+        ex.onclick = bhdExcel;
+    }
 }
+
+
+
   function parserOf(name){try{if(typeof window[name]==='function')return window[name];}catch(e){}try{if(name==='parsePdfFile'&&typeof parsePdfFile==='function')return parsePdfFile;if(name==='parseSheetFile'&&typeof parseSheetFile==='function')return parseSheetFile;}catch(e){}return null;}
   function loadScriptOnce(src,globalName){return new Promise(function(resolve,reject){if(globalName&&window[globalName])return resolve(window[globalName]);var old=document.querySelector('script[src="'+src+'"]');if(old){old.addEventListener('load',function(){resolve(globalName?window[globalName]:true);});old.addEventListener('error',reject);return;}var s=document.createElement('script');s.src=src;s.onload=function(){resolve(globalName?window[globalName]:true);};s.onerror=function(){reject(new Error(src+' yüklenemedi.'));};document.head.appendChild(s);});}
   async function ensurePdfJs(){if(!window.pdfjsLib)await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js','pdfjsLib');if(window.pdfjsLib&&window.pdfjsLib.GlobalWorkerOptions)window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';if(!window.pdfjsLib)throw new Error('PDF okuma kütüphanesi yüklenemedi.');return window.pdfjsLib;}
