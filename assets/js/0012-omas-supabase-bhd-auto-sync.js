@@ -275,6 +275,6 @@
   OMAS.Services.BHD = OMAS.Services.BHD || {};
 
   OMAS.Services.BHD.saveToDatabase = function () {
-      return syncRows('manual');
+      return saveWorkspaceToDatabase('manual');
   };
 })();
