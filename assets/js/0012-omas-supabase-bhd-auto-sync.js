@@ -2,7 +2,7 @@
   var BHD_ROWS = 'bhdPersistentRowsV267';
   var syncing = false;
   var queued = false;
-  var lastSig = '';
+
 
   function auth() {
     if (!window.omasSupabase || !window.OMAS_AUTH || !window.OMAS_AUTH.company || !window.OMAS_AUTH.company.id) return null;
@@ -163,7 +163,7 @@
     return inserted;
   }
 
-  async function syncRows(reason) {
+  async function saveWorkspaceToDatabase(reason) {
     var a = auth();
     if (!a) return { saved: 0, skipped: 0 };
     if (syncing) {
@@ -173,10 +173,16 @@
     syncing = true;
     queued = false;
     try {
-      var rows = readRows().filter(function (row) { return row && !row.supabaseBankMovementId; });
-      var sig = rows.length + ':' + rows.map(function (r, i) { return dedupeKey(r, i); }).join('~').slice(0, 4000);
-      if (!rows.length || sig === lastSig) return { saved: 0, skipped: rows.length };
-      lastSig = sig;
+      var rows = readRows();
+      if (!rows.length) {
+        return {
+          saved: 0,
+          skipped: 0,
+          errors: []
+        };
+        }
+      
+     
       var saved = 0, skipped = 0, errors = [];
       showStatus('Supabase BHD kaydi basladi: ' + rows.length + ' hareket...', true);
       for (var i = 0; i < rows.length; i++) {
@@ -203,23 +209,38 @@
           errors.push((sourceName(rows[i]) || 'BHD') + ': ' + (err && err.message ? err.message : String(err)));
         }
       }
-      if (window.bhdRawRows && Array.isArray(window.bhdRawRows)) {
-        window.bhdRawRows.forEach(function (row, i) {
-          if (rows[i] && rows[i].supabaseBankMovementId) row.supabaseBankMovementId = rows[i].supabaseBankMovementId;
-        });
-      }
+
       showStatus('Supabase BHD kaydi tamam: yeni ' + saved + ', zaten var/atlanan ' + skipped + (errors.length ? ', hata ' + errors.length : '') + '.', errors.length ? false : true);
-      if (errors.length) console.warn('Supabase BHD auto sync errors', errors);
+      if (errors.length) {
+          console.warn('Supabase BHD auto sync errors', errors);
+          } else {
+
+              OMAS.Workspace.setBhdDraftRows([]);
+
+              if (window.bhdRawRows) {
+                  window.bhdRawRows.length = 0;
+              }
+
+              if (window.omasLoadRuntimeFromSupabase) {
+                  window.omasLoadRuntimeFromSupabase();
+              }
+          }
+
+          return {
+              saved: saved,
+              skipped: skipped,
+              errors: errors
+          };
       
       return { saved: saved, skipped: skipped, errors: errors };
     } finally {
       syncing = false;
-      if (queued) setTimeout(function () { syncRows('queued'); }, 500);
+      if (queued) setTimeout(function () { saveWorkspaceToDatabase('queued'); }, 500);
     }
   }
 
   function schedule(reason) {
-    setTimeout(function () { syncRows(reason).catch(function (err) {
+    setTimeout(function () { saveWorkspaceToDatabase(reason).catch(function (err) {
       showStatus('Supabase BHD kaydi hatasi: ' + (err && err.message ? err.message : String(err)), false);
     }); }, 350);
   }
@@ -235,7 +256,7 @@
     Storage.prototype.setItem = wrapped;
   }
   */
-  window.omasSyncBhdRowsToSupabase = syncRows;
+  window.omasSyncBhdRowsToSupabase = saveWorkspaceToDatabase;
   
 
   
