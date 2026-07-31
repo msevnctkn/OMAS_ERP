@@ -217,6 +217,13 @@
     var rows = buildXmlRuntimeRows(data);
     var xmlState = buildXmlStateMaps(rows);
     var bhdRows = buildBhdRuntimeRows(data);
+    if (
+        window.OMAS &&
+        OMAS.Runtime &&
+        typeof OMAS.Runtime.setBhdRows === 'function'
+      ) {
+        OMAS.Runtime.setBhdRows(bhdRows);
+      }
     var bhdState = buildBhdStateMaps(bhdRows);
     var paymentRuntime = buildPaymentRuntime(data, bhdRows);
     localStorage.setItem(ROWS, JSON.stringify(rows));
