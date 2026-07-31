@@ -33,8 +33,18 @@
   var purgeTimer=null;function startCategoryPurge(){if(purgeTimer)return;purgeOldCategorySearch();purgeTimer=setInterval(function(){var p=q('#v189PageCategory');if(p&&(p.classList.contains('active')||p.style.display==='block'))purgeOldCategorySearch();},250);try{new MutationObserver(function(){var p=q('#v189PageCategory');if(p&&(p.classList.contains('active')||p.style.display==='block'))purgeOldCategorySearch();}).observe(document.body,{childList:true,subtree:true});}catch(e){}}
   setTimeout(enhanceCategory,500);setTimeout(enhanceCategory,1400);startCategoryPurge();
 
-  function bhdId(r){return [r.kaynak,r.referans,r.sira,r.tarih,r.aciklama].join('|');}
-  function bhdRows(){var live=(typeof window.bhdRawRows!=='undefined'&&Array.isArray(window.bhdRawRows))?window.bhdRawRows:[];return live.length?live:read(BHD_ROWS,[]);}
+  function bhdId(r){return [r&&r.kaynak,r&&r.referans,r&&r.sira,r&&r.tarih,r&&r.aciklama].join('|');}
+  function cloneRows(rows){return (Array.isArray(rows)?rows:[]).map(function(r){return Object.assign({},r);});}
+  function bhdRows(){
+    try{
+      if(window.OMAS&&OMAS.Workspace&&typeof OMAS.Workspace.getBhdDraftRows==='function'){
+        var draft=OMAS.Workspace.getBhdDraftRows();
+        if(Array.isArray(draft)&&draft.length)return cloneRows(draft);
+      }
+    }catch(e){}
+    var live=(typeof window.bhdRawRows!=='undefined'&&Array.isArray(window.bhdRawRows))?window.bhdRawRows:[];
+    return live.length?cloneRows(live):cloneRows(read(BHD_ROWS,[]));
+  }
   function saveBhdRows() {
     var rows = OMAS.Workspace.getBhdDraftRows();
 
@@ -151,7 +161,32 @@
     ['O','K','R','NONE'].forEach(function(fk){var f=ag.firms[fk];if(!f.total)return;h+='<tr><td colspan="6" class="v264-company-title">'+esc(firmName(fk))+' - Toplam '+money(f.total)+' TL</td></tr>';Object.keys(ag.tree[fk]||{}).sort(function(a,b){return ag.tree[fk][b].total-ag.tree[fk][a].total;}).forEach(function(main,i){var m=ag.tree[fk][main],mp=f.total?m.total/f.total*100:0;h+='<tr class="bhd-v267-main" data-bhd-v267-main="'+esc(main)+'" data-bhd-v267-firm="'+fk+'"><td><button class="v267-show-btn" type="button" data-bhd-v267-show="1">Faturaları Göster</button></td><td class="amount">'+(i+1)+'</td><td>'+esc(main)+'</td><td class="amount">'+money(m.total)+' TL</td><td class="amount">'+pct(mp)+'</td><td class="amount">100%</td></tr>';Object.keys(m.subs).sort(function(a,b){return m.subs[b].total-m.subs[a].total;}).forEach(function(sub){var s=m.subs[sub],sp=m.total?s.total/m.total*100:0,tp=f.total?s.total/f.total*100:0;h+='<tr data-bhd-v267-row><td></td><td></td><td>'+esc(sub)+'</td><td class="amount">'+money(s.total)+' TL</td><td class="amount">'+pct(tp)+'</td><td class="amount">'+pct(sp)+'</td></tr>';});});});
     h+='</tbody></table></div></div>';
     var kkRows=ag.rows.filter(function(r){return r&&r.ziraatKk;}),bankRows=ag.rows.filter(function(r){return !(r&&r.ziraatKk);});
-    if(kkRows.length){h+='<div class="bhd-v267-card"><h4>Kredi Kartı Ekstreleri</h4><div class="bhd-v267-table-wrap"><table class="bhd-v267-table bhd-v267-line-table"><thead><tr><th>Firma Seç</th><th>Tarih</th><th>İşlem Açıklaması</th><th>Tutar</th><th>Kategori Seç</th><th>İşlem</th></tr></thead><tbody>';kkRows.forEach(function(r){var id=bhdId(r),c=bhdRowCat(r),subList=subs[c.main]||[],tl=Number(r.tlTutar||0)||Number(r.giden||0)||Number(r.gelen||0)||0,desc=esc(r.islemAciklamasi||r.aciklama||r.kisiFirma||'');h+='<tr data-bhd-v267-row><td><input class="bhd-v267-company" data-bhd-v267-company="'+esc(id)+'" value="'+esc(bhdRowCompany(r))+'" maxlength="1" placeholder="O/K/R"><br><small>'+esc(firmName(bhdRowCompany(r)))+'</small></td><td>'+esc(r.islemTarihi||r.tarih||'')+'</td><td>'+desc+'</td><td class="amount">'+money(tl)+'</td><td><div class="bhd-v267-selects"><select data-bhd-v267-main="'+esc(id)+'">'+bhdOpts(cats,c.main,'Kategori seç')+'</select><select data-bhd-v267-sub="'+esc(id)+'">'+bhdOpts(subList,c.sub,'Alt kategori seç')+'</select></div></td></tr>';});h+='</tbody></table></div></div>';}
+    if(kkRows.length){
+    h+='<div class="bhd-v267-card"><h4>Kredi Kartı Ekstreleri</h4><div class="bhd-v267-table-wrap"><table class="bhd-v267-table bhd-v267-line-table"><thead><tr><th>Firma Seç</th><th>Tarih</th><th>İşlem Açıklaması</th><th>Tutar</th><th>Kategori Seç</th></tr></thead><tbody>';
+
+    kkRows.forEach(function(r){
+
+        var id=bhdId(r),
+            c=bhdRowCat(r),
+            subList=subs[c.main]||[],
+            tl=Number(r.tlTutar||0)||Number(r.giden||0)||Number(r.gelen||0)||0,
+            desc=esc(r.islemAciklamasi||r.aciklama||r.kisiFirma||'');
+
+        h+='<tr data-bhd-v267-row>'+
+            '<td><input class="bhd-v267-company" data-bhd-v267-company="'+esc(id)+'" value="'+esc(bhdRowCompany(r))+'" maxlength="1" placeholder="O/K/R"><br><small>'+esc(firmName(bhdRowCompany(r)))+'</small></td>'+
+            '<td>'+esc(r.islemTarihi||r.tarih||'')+'</td>'+
+            '<td>'+desc+'</td>'+
+            '<td class="amount">'+money(tl)+'</td>'+
+            '<td><div class="bhd-v267-selects">'+
+                '<select data-bhd-v267-main="'+esc(id)+'">'+bhdOpts(cats,c.main,'Kategori seç')+'</select>'+
+                '<select data-bhd-v267-sub="'+esc(id)+'">'+bhdOpts(subList,c.sub,'Alt kategori seç')+'</select>'+
+            '</div></td>'+
+        '</tr>';
+
+    });
+
+    h+='</tbody></table></div></div>';
+}
     if(bankRows.length||!kkRows.length){
     h+='<div class="bhd-v267-card"><h4>Banka / Hesap Hareketleri</h4><div class="bhd-v267-table-wrap"><table class="bhd-v267-table bhd-v267-line-table"><thead><tr><th>Firma</th><th>Tarih</th><th>Gelen</th><th>Giden</th><th>Net</th><th>Bakiye</th><th>Açıklama</th><th>Kategori Seç</th><th>İşlem</th></tr></thead><tbody>';
 
@@ -213,7 +248,7 @@
             }
 
             OMAS.Workspace.setBhdDraftRows(
-                OMAS.Runtime.getBhdRows()
+                cloneRows(OMAS.Runtime.getBhdRows())
             );
 
             renderBhdCategory();
@@ -224,6 +259,39 @@
             }
         };
     }
+
+    // Kayıtlı satırı düzenleme moduna al
+    qa('.bhd-runtime-edit').forEach(function(btn){
+        btn.onclick = function(){
+            var id = btn.getAttribute('data-bhd-id');
+            var sourceRows = bhdRows();
+            var row = sourceRows.find(function(r){ return bhdId(r) === id; });
+
+            if(!row){
+                var missingStatus = q('#bhdV267Status');
+                if(missingStatus) missingStatus.textContent = 'Düzenlenecek kayıt bulunamadı.';
+                return;
+            }
+
+            var company = bhdRowCompany(row);
+            var category = bhdRowCat(row);
+            var editRow = Object.assign({}, row, {
+                sirket: company,
+                firma: company,
+                kategori: category.main,
+                altKategori: category.sub,
+                __bhdEditMode: true
+            });
+
+            OMAS.Workspace.setBhdDraftRows([editRow]);
+            renderBhdCategory();
+
+            var editStatus = q('#bhdV267Status');
+            if(editStatus){
+                editStatus.textContent = 'Düzenleme modu: seçilen tek kayıt çalışma alanına alındı.';
+            }
+        };
+    });
 
     // Arama
     var s = q('#bhdV267Search');
@@ -249,9 +317,28 @@
     if(saveBtn){
         saveBtn.onclick = async function(){
 
+            var draftRows = bhdRows();
+            var companyMap = bhdCompanyMap();
+            var categoryMap = bhdCatMap();
+
+            draftRows.forEach(function(row){
+                var id = bhdId(row);
+                var company = code(companyMap[id] || row.sirket || row.firma || '');
+                var category = categoryMap[id] || {};
+
+                row.sirket = company;
+                row.firma = company;
+                row.kategori = category.main || row.kategori || 'Diğer';
+                row.altKategori = category.sub || row.altKategori || '';
+            });
+
+            OMAS.Workspace.setBhdDraftRows(cloneRows(draftRows));
+
             var result = await OMAS.Services.BHD.saveToDatabase();
 
-            if(result.errors && result.errors.length){
+            if(result && result.errors && result.errors.length){
+                var errorStatus = q('#bhdV267Status');
+                if(errorStatus) errorStatus.textContent = 'Veritabanı kaydı sırasında hata oluştu.';
                 return;
             }
 
@@ -342,7 +429,42 @@ wb.SheetNames.forEach(function(sn){var aoa=X.utils.sheet_to_json(wb.Sheets[sn],{
   document.addEventListener('click',function(e){var nav=e.target&&e.target.closest&&e.target.closest('[data-bhd-v267-view]');if(nav){e.preventDefault();setBhdMode(nav.getAttribute('data-bhd-v267-view'));return;}var show=e.target&&e.target.closest&&e.target.closest('[data-bhd-v267-show]');if(show){e.preventDefault();var tr=show.closest('.bhd-v267-main'),firm=tr.getAttribute('data-bhd-v267-firm'),main=tr.getAttribute('data-bhd-v267-main'),ag=bhdAggregate(),rows=(((ag.tree[firm]||{})[main]||{}).rows)||[];showBhdDetail(firmName(firm)+' / '+main,rows);return;}var k=e.target&&e.target.closest&&e.target.closest('[data-bhd-v267-firm].bhd-v267-kpi');if(k){var fk=k.getAttribute('data-bhd-v267-firm'),rows=bhdAggregate().firms[fk].rows;showBhdDetail(firmName(fk),rows);return;}},true);
   document.addEventListener('input',function(e){var x=e.target;if(x&&x.matches&&x.matches('[data-bhd-v267-company]'))x.value=code(x.value);},true);
   document.addEventListener('change',function(e){var x=e.target;if(!x||!x.matches)return;if(x.matches('[data-bhd-v267-company]')){var m=bhdCompanyMap(),id=x.getAttribute('data-bhd-v267-company'),v=code(x.value);if(v)m[id]=v;else delete m[id];write(BHD_COMPANY,m);renderBhdCategory();}if(x.matches('[data-bhd-v267-main]')){var c=bhdCatMap(),id=x.getAttribute('data-bhd-v267-main');c[id]={main:x.value,sub:''};write(BHD_CAT,c);renderBhdCategory();}if(x.matches('[data-bhd-v267-sub]')){var c=bhdCatMap(),id=x.getAttribute('data-bhd-v267-sub');if(!c[id])c[id]={main:'',sub:''};c[id].sub=x.value;write(BHD_CAT,c);renderBhdCategory();}},true);
-  function bhdExcel(){var ag=bhdAggregate(),rows=[['Firma','Ana Kategori','Alt Kategori','Tutar','Firma İçi %','Ana Kategori İçi %']];['O','K','R','NONE'].forEach(function(fk){var ft=ag.firms[fk].total;Object.keys(ag.tree[fk]||{}).forEach(function(main){var m=ag.tree[fk][main];Object.keys(m.subs||{}).forEach(function(sub){var s=m.subs[sub];rows.push([firmName(fk),main,sub,s.total,ft?s.total/ft:0,m.total?s.total/m.total:0]);});});});var html='<table>'+rows.map(function(r){return '<tr>'+r.map(function(c){return '<td>'+esc(c)+'</td>';}).join('')+'</tr>';}).join('')+'</table>',blob=new Blob(['\ufeff'+html],{type:'application/vnd.ms-excel;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bhd_kategori_raporu_'+new Date().toISOString().slice(0,10)+'.xls';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);}
+  function bhdExcel(){
+    var ag=bhdAggregate();
+    var rows=[['Firma','Ana Kategori','Alt Kategori','Tutar','Firma İçi %','Ana Kategori İçi %']];
+
+    ['O','K','R','NONE'].forEach(function(fk){
+      var ft=ag.firms[fk].total;
+      Object.keys(ag.tree[fk]||{}).forEach(function(main){
+        var m=ag.tree[fk][main];
+        Object.keys(m.subs||{}).forEach(function(sub){
+          var sr=m.subs[sub];
+          rows.push([
+            firmName(fk),
+            main,
+            sub,
+            Number(sr.total||0).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}),
+            Number(ft?sr.total/ft:0).toLocaleString('tr-TR',{style:'percent',minimumFractionDigits:2,maximumFractionDigits:2}),
+            Number(m.total?sr.total/m.total:0).toLocaleString('tr-TR',{style:'percent',minimumFractionDigits:2,maximumFractionDigits:2})
+          ]);
+        });
+      });
+    });
+
+    function csvCell(v){
+      var t=String(v==null?'':v).replace(/"/g,'""');
+      return '"'+t+'"';
+    }
+
+    var csv='sep=;\r\n'+rows.map(function(r){return r.map(csvCell).join(';');}).join('\r\n');
+    var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='bhd_kategori_raporu_'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);
+  }
   var oldAnalyze=window.analyzeBHD;if(typeof oldAnalyze==='function'&&!oldAnalyze.__v267){window.analyzeBHD=async function(){var r=await oldAnalyze.apply(this,arguments);saveBhdRows();if(q('#bhdModule.bhd-v267-category-mode'))renderBhdCategory();return r;};window.analyzeBHD.__v267=true;}
   document.addEventListener('DOMContentLoaded',function(){setTimeout(ensureBhdShell,800);});setTimeout(ensureBhdShell,1000);setTimeout(function(){if(q('#bhdModule.active'))ensureBhdShell();},1800);
 })();
