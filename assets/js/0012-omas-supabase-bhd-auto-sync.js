@@ -197,9 +197,25 @@
             .maybeSingle();
           if (existing.error) throw existing.error;
           if (existing.data && existing.data.id) {
-            rows[i].supabaseBankMovementId = existing.data.id;
-            skipped++;
-            continue;
+
+              rows[i].supabaseBankMovementId = existing.data.id;
+
+              var updated = await a.client
+                  .from('banka_hareketleri')
+                  .update({
+                      company_code: body.company_code,
+                      category_main: body.category_main,
+                      category_sub: body.category_sub,
+                      cari_id: body.cari_id
+                  })
+                  .eq('id', existing.data.id);
+
+              if(updated.error){
+                  throw updated.error;
+              }
+
+              skipped++;
+              continue;
           }
           var inserted = await insertMovement(a.client, body);
           if (inserted.error) throw inserted.error;
@@ -222,8 +238,12 @@
               }
 
               if (window.omasLoadRuntimeFromSupabase) {
-                  window.omasLoadRuntimeFromSupabase();
+                  await window.omasLoadRuntimeFromSupabase();
+
               }
+
+              OMAS.Workspace.setBhdDraftRows(
+              OMAS.Runtime.getBhdRows().slice());
           }
 
           return {
