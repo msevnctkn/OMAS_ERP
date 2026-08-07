@@ -1,20 +1,16 @@
-﻿OMAS GRUP FINANS - MODULER SURUM
+Yükleme sırası:
+1) bhd-v2-state.js
+2) bhd-v2-api.js
+3) bhd-v2-page.js
+4) bhd-v2.css
 
-Acilacak dosya:
-  index.html
+HTML:
+<link rel="stylesheet" href="assets/js/bhd-v2/bhd-v2.css">
+<script src="assets/js/bhd-v2/bhd-v2-state.js"></script>
+<script src="assets/js/bhd-v2/bhd-v2-api.js"></script>
+<script src="assets/js/bhd-v2/bhd-v2-page.js"></script>
+<div id="bhdV2Mount"></div>
+<script>document.addEventListener('DOMContentLoaded',function(){OMAS.BHDV2.Page.mount('#bhdV2Mount');});</script>
 
-Bu surumde tek HTML icindeki CSS ve JavaScript bloklari ayrildi:
-  assets/css/*.css
-  assets/js/*.js
-
-Kaynak tek dosya yedegi:
-  _kaynak_tek_html_yedek.html
-
-Not:
-Bu birinci asama modulerlestirmedir. Davranisi bozmadan kod dosyalarini ayirir.
-Ikinci asamada ekranlar ayri modullere bolunecek:
-  - Fatura Analiz
-  - Banka Hareketleri
-  - Cari Kartlar
-  - Proje Yonetimi
-  - Malzeme Kartlari
+Bu ilk sürüm Supabase'den kayıtları getirir, düzenler, INSERT/UPDATE/soft delete yapar.
+Sonraki adım mevcut banka parser'larını adapter ile bağlamaktır.
